@@ -1,184 +1,70 @@
 export default async function handler(req, res) {
   const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
-  const {
-    prompt,
-    model,
-    aspect_ratio,
-    output_format = "jpg",
-    imageCount = 1,
-    imageUrls = [],
-  } = req.body;
+  const { prompt, model, aspect_ratio, output_format = "jpg", imageUrls = [] } = req.body;
 
   if (!prompt)
     return res.status(400).json({ message: "프롬프트가 없습니다." });
 
   const MODEL_ENDPOINTS = {
-    "google/imagen-4-fast":
-      "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
-    "google/nano-banana":
-      "https://api.replicate.com/v1/models/google/nano-banana/predictions",
-    "bytedance/seedream-4":
-      "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions",
+    "google/imagen-4-fast": "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
+    "google/nano-banana": "https://api.replicate.com/v1/models/google/nano-banana/predictions",
+    "bytedance/seedream-4": "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions"
   };
 
   const endpoint = MODEL_ENDPOINTS[model];
   if (!endpoint)
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-  // ✅ 확실하게 작동하는 파일 업로드 함수 (Vercel 서버 호환)
-  async function uploadToReplicate(base64Data) {
-    try {
-      console.log("📤 [UPLOAD INIT] 데이터 길이:", base64Data?.length || 0);
+  // 이미지 URL만 사용하는 구조
+  const inputData = {
+    prompt,
+    aspect_ratio,
+    output_format
+  };
 
-      if (!base64Data || !base64Data.startsWith("data:image/")) {
-        throw new Error("유효하지 않은 Base64 이미지 데이터입니다.");
-      }
-
-      const base64Content = base64Data.split(",")[1];
-      const mimeType = base64Data.substring(
-        base64Data.indexOf(":") + 1,
-        base64Data.indexOf(";")
-      );
-      const ext = mimeType.split("/")[1] || "png";
-      const buffer = Buffer.from(base64Content, "base64");
-
-      const boundary = "----replicateBoundary" + Math.random().toString(16);
-      const bodyParts = [];
-
-      bodyParts.push(Buffer.from(`--${boundary}\r\n`));
-      bodyParts.push(
-        Buffer.from(
-          `Content-Disposition: form-data; name="file"; filename="upload.${ext}"\r\n` +
-            `Content-Type: ${mimeType}\r\n\r\n`
-        )
-      );
-      bodyParts.push(buffer);
-      bodyParts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-
-      const body = Buffer.concat(bodyParts);
-
-      console.log("📦 [UPLOAD TRY] 크기:", body.length, "bytes");
-
-      const response = await fetch("https://api.replicate.com/v1/files", {
-        method: "POST",
-        headers: {
-          Authorization: `Token ${REPLICATE_API_KEY}`,
-          "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        },
-        body,
-      });
-
-      const text = await response.text();
-      console.log("📬 [UPLOAD RESPONSE RAW]:", text);
-
-      let json;
-      try {
-        json = JSON.parse(text);
-      } catch {
-        throw new Error("응답 JSON 파싱 실패: " + text);
-      }
-
-      if (!response.ok || !json.url) {
-        throw new Error(
-          `파일 업로드 실패 (${response.status}): ${
-            json.detail || json.error || text
-          }`
-        );
-      }
-
-      console.log("🧩 [UPLOAD OK] Replicate URL:", json.url);
-      return json.url;
-    } catch (err) {
-      console.error("❌ 파일 업로드 오류:", err);
-      return null;
-    }
-  }
-
-  // ✅ base64 → Replicate 파일 URL 변환
-  let uploadedUrls = [];
-  for (const img of imageUrls) {
-    if (img.startsWith("data:image/")) {
-      const url = await uploadToReplicate(img);
-      if (url) uploadedUrls.push(url);
-    } else uploadedUrls.push(img);
-  }
-
-  // ✅ 모델별 입력값 구성
-  let inputData = { prompt };
-
-  if (model === "google/imagen-4-fast") {
-    inputData = {
-      prompt,
-      aspect_ratio: aspect_ratio || "4:3",
-      output_format,
-      safety_filter_level: "block_only_high",
-    };
-  } else if (model === "google/nano-banana") {
-    inputData = {
-      prompt,
-      aspect_ratio: aspect_ratio || "1:1",
-      output_format,
-    };
-    if (uploadedUrls.length > 0) inputData.image_input = uploadedUrls;
-  } else if (model === "bytedance/seedream-4") {
-    inputData = {
-      prompt,
-      aspect_ratio: aspect_ratio || "4:3",
-      output_format,
-      max_images: imageCount,
-      size: "2K",
-      width: 2048,
-      height: 2048,
-      enhance_prompt: true,
-      sequential_image_generation: "disabled",
-    };
-    if (uploadedUrls.length > 0) inputData.image_input = uploadedUrls;
-  }
-
-  console.log("🚀 [SEND TO REPLICATE]", model, inputData);
+  if (imageUrls.length > 0)
+    inputData.image_input = imageUrls.map(u => ({ value: u }));
 
   try {
+    console.log("🚀 [SEND TO REPLICATE]", model, inputData);
+
     const r = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Token ${REPLICATE_API_KEY}`,
         "Content-Type": "application/json",
-        Prefer: "wait",
+        Prefer: "wait"
       },
-      body: JSON.stringify({ input: inputData }),
+      body: JSON.stringify({ input: inputData })
     });
 
     const pred = await r.json();
-    console.log("📥 [REPLICATE RESPONSE]", pred);
-
-    if (!r.ok) throw new Error(pred.error || pred.detail || "API 요청 실패");
+    if (!r.ok) throw new Error(pred.error || "API 요청 실패");
 
     let urls = [];
     if (Array.isArray(pred.output)) urls = pred.output;
     else if (typeof pred.output === "string") urls = [pred.output];
 
-    // ✅ Nano-banana는 간혹 지연 응답 → 재조회
-    if (model === "google/nano-banana" && urls.length === 0 && pred.id) {
-      console.log("⌛ Nano Banana 지연 → 재조회 중...");
-      await new Promise((r) => setTimeout(r, 2000));
-      const poll = await fetch(
-        `https://api.replicate.com/v1/predictions/${pred.id}`,
-        { headers: { Authorization: `Token ${REPLICATE_API_KEY}` } }
-      );
+    if (urls.length === 0 && model === "google/nano-banana" && pred.id) {
+      console.log("⌛ Nano Banana 지연 → 재조회...");
+      await new Promise(r => setTimeout(r, 1500));
+      const poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
+        headers: { Authorization: `Token ${REPLICATE_API_KEY}` }
+      });
       const p = await poll.json();
       if (Array.isArray(p.output)) urls = p.output;
       else if (typeof p.output === "string") urls = [p.output];
-      console.log("✅ [폴링 후 출력]", urls);
     }
 
     if (!urls.length) throw new Error("이미지 출력이 없습니다.");
-
     res.status(200).json({ imageUrls: urls });
+
   } catch (err) {
     console.error("서버 오류:", err);
     res.status(500).json({ message: err.message });
   }
 }
+
 
 
 /* 생성이미지 기반 변경 가능

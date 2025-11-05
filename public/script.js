@@ -1,4 +1,123 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const promptInput = document.getElementById('prompt-input');
+  const generateButton = document.getElementById('generate-button');
+  const modelSelect = document.getElementById('model-select');
+  const ratioSelect = document.getElementById('ratio-select');
+  const uploadInput = document.getElementById('image-upload');
+  const addToInputToggle = document.getElementById('add-to-input-toggle');
+  const resultContainer = document.getElementById('result-container');
+  const uploadStatus = document.getElementById('upload-status');
+
+  let uploadedUrls = [];
+  let lastGeneratedUrls = [];
+
+  // Cloudinary 익명 업로드용 (테스트 계정)
+  const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/demo/image/upload";
+  const CLOUDINARY_PRESET = "docs_upload_example_us_preset";
+
+  const MODEL_RATIOS = {
+    "google/imagen-4-fast": ["1:1", "4:3", "3:2", "16:9"],
+    "google/nano-banana": ["1:1"],
+    "bytedance/seedream-4": ["1:1", "4:3", "3:4", "16:9"]
+  };
+
+  modelSelect.addEventListener('change', () => {
+    const selectedModel = modelSelect.value;
+    ratioSelect.innerHTML = "";
+    MODEL_RATIOS[selectedModel].forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r;
+      opt.textContent = r;
+      ratioSelect.appendChild(opt);
+    });
+  });
+
+  // Cloudinary 업로드
+  uploadInput.addEventListener('change', async (e) => {
+    const files = e.target.files;
+    uploadedUrls = [];
+    uploadStatus.textContent = "이미지 업로드 중...";
+
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", CLOUDINARY_PRESET);
+
+      const res = await fetch(CLOUDINARY_UPLOAD_URL, { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.secure_url) uploadedUrls.push(data.secure_url);
+    }
+
+    uploadStatus.textContent = `${uploadedUrls.length}개 이미지 업로드 완료`;
+  });
+
+  generateButton.addEventListener('click', async () => {
+    const promptText = promptInput.value.trim();
+    const model = modelSelect.value;
+    const aspect = ratioSelect.value;
+
+    if (!promptText) return alert("프롬프트를 입력하세요.");
+
+    let imageUrls = [...uploadedUrls];
+    if (addToInputToggle.checked && lastGeneratedUrls.length > 0)
+      imageUrls.push(...lastGeneratedUrls);
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: promptText,
+          model,
+          aspect_ratio: aspect,
+          imageUrls
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "API 오류 발생");
+
+      resultContainer.innerHTML = "";
+      lastGeneratedUrls = data.imageUrls;
+
+      data.imageUrls.forEach(url => {
+        const img = document.createElement("img");
+        img.src = url;
+        img.width = 512;
+
+        const dl = document.createElement("a");
+        dl.href = url;
+        dl.download = "result.jpg";
+        dl.textContent = "다운로드";
+
+        const div = document.createElement("div");
+        div.appendChild(img);
+        div.appendChild(document.createElement("br"));
+        div.appendChild(dl);
+        resultContainer.appendChild(div);
+      });
+
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  function setLoading(state) {
+    generateButton.disabled = state;
+    generateButton.textContent = state ? "이미지 생성 중..." : "이미지 생성하기";
+  }
+
+  modelSelect.dispatchEvent(new Event('change'));
+});
+
+
+
+/*생성이미지 기반 변경 가능
+document.addEventListener('DOMContentLoaded', () => {
   const modelSelect = document.getElementById('model-select');
   const ratioSelect = document.getElementById('ratio-select');
   const modelInfo = document.getElementById('model-info');
@@ -145,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-
+*/
 
 /*
 document.addEventListener('DOMContentLoaded', () => {
