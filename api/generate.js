@@ -19,34 +19,35 @@ export default async function handler(req, res) {
   }
 
   // 모델별 입력값 구성
-  let inputData = { prompt };
-  if (model === "google/imagen-4-fast") {
-    inputData = {
-      prompt,
-      aspect_ratio: "4:3",
-      output_format: "jpg",
-      safety_filter_level: "block_only_high"
-    };
-  } else if (model === "google/nano-banana") {
-    inputData = {
-      prompt,
-      image_input: [],
-      aspect_ratio: "match_image",
-      output_format: "jpg"
-    };
-  } else if (model === "bytedance/seedream-4") {
-    inputData = {
-      size: "2K",
-      width: 2048,
-      height: 2048,
-      prompt,
-      max_images: 1,
-      image_input: [],
-      aspect_ratio: "4:3",
-      enhance_prompt: true,
-      sequential_image_generation: "disabled"
-    };
-  }
+let inputData = { prompt };
+
+if (model === "google/imagen-4-fast") {
+  inputData = {
+    prompt,
+    aspect_ratio: "4:3",
+    output_format: "jpg",
+    safety_filter_level: "block_only_high"
+  };
+} else if (model === "google/nano-banana") {
+  inputData = {
+    prompt,
+    // 기존: aspect_ratio: "match_image",
+    aspect_ratio: "4:3", //실제로 지원되는 값으로 변경
+    output_format: "jpg"
+  };
+} else if (model === "bytedance/seedream-4") {
+  inputData = {
+    size: "2K",
+    width: 2048,
+    height: 2048,
+    prompt,
+    max_images: 1,
+    image_input: [],
+    aspect_ratio: "4:3",
+    enhance_prompt: true,
+    sequential_image_generation: "disabled"
+  };
+}
 
   try {
     const response = await fetch(targetEndpoint, {
