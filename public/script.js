@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ratioSelect = document.getElementById('ratio-select');
   const ratioInfo = document.getElementById('ratio-info');
   const addToInputToggle = document.getElementById('add-to-input-toggle');
+  const addContainer = document.getElementById('add-to-input-container');
 
   let autoAddedImage = null; // 자동 저장 이미지 (토글용)
 
@@ -18,14 +19,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const MODEL_RATIOS = {
     "google/imagen-4-fast": ["1:1", "4:3", "3:2", "16:9"],
-    "google/nano-banana": ["1:1" , "4:3", "3:4", "16:9" , "9:16"],
+    "google/nano-banana": ["1:1", "4:3", "3:4", "16:9", "9:16"],
     "bytedance/seedream-4": ["1:1", "4:3", "3:4", "16:9"]
   };
 
+  // 모델 변경 시 라벨, 비율, 이미지 입력 토글 상태 갱신
   modelSelect.addEventListener('change', () => {
     const selectedModel = modelSelect.value;
     modelInfo.textContent = MODEL_INFO[selectedModel] || "";
 
+    // 비율 드롭다운 갱신
     ratioSelect.innerHTML = "";
     MODEL_RATIOS[selectedModel].forEach(ratio => {
       const option = document.createElement('option');
@@ -33,13 +36,25 @@ document.addEventListener('DOMContentLoaded', () => {
       option.textContent = ratio;
       ratioSelect.appendChild(option);
     });
-
     ratioInfo.textContent = `지원 비율: ${MODEL_RATIOS[selectedModel].join(", ")}`;
+
+    // ✅ 이미지 입력 가능 여부에 따라 토글 비활성화
+    if (selectedModel === "google/imagen-4-fast") {
+      addToInputToggle.checked = false;
+      addToInputToggle.disabled = true;
+      addContainer.style.opacity = "0.5";
+      addContainer.title = "이 모델은 이미지 추가를 지원하지 않습니다.";
+    } else {
+      addToInputToggle.disabled = false;
+      addContainer.style.opacity = "1.0";
+      addContainer.title = "";
+    }
   });
 
-  // 초기화
+  // 페이지 초기 상태 세팅
   modelSelect.dispatchEvent(new Event('change'));
 
+  // 버튼 클릭 시 이미지 생성
   generateButton.addEventListener('click', handleImageGeneration);
 
   async function handleImageGeneration() {
@@ -52,10 +67,13 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 토글이 켜져 있으면 이전 이미지 포함
     let imageUrls = [];
-    if (addToInputToggle && addToInputToggle.checked && autoAddedImage) {
-      imageUrls.push(autoAddedImage);
+
+    // ✅ Fast 모델은 이미지 추가 완전 차단
+    if (selectedModel !== "google/imagen-4-fast") {
+      if (addToInputToggle && addToInputToggle.checked && autoAddedImage) {
+        imageUrls.push(autoAddedImage);
+      }
     }
 
     setLoadingState(true);

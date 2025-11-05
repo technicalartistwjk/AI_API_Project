@@ -17,9 +17,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
   }
 
-  // 모델별 입력값 구성
   let inputData = { prompt };
 
+  // ✅ 각 모델별 입력값 구성 (Fast 모델은 imageUrls 무시)
   if (model === "google/imagen-4-fast") {
     inputData = {
       prompt,
@@ -27,27 +27,30 @@ export default async function handler(req, res) {
       output_format: "jpg",
       safety_filter_level: "block_only_high"
     };
-  } else if (model === "google/nano-banana") {
+  } 
+  else if (model === "google/nano-banana") {
     inputData = {
       prompt,
       aspect_ratio: aspect_ratio || "1:1",
       output_format: "jpg"
     };
+    // Nano Banana는 이미지 기반 입력 지원
     if (Array.isArray(imageUrls) && imageUrls.length > 0) {
       inputData.image_input = imageUrls.map(u => ({ value: u }));
     }
-  } else if (model === "bytedance/seedream-4") {
+  } 
+  else if (model === "bytedance/seedream-4") {
     inputData = {
       size: "2K",
       width: 2048,
       height: 2048,
       prompt,
       max_images: 1,
-      image_input: [],
       aspect_ratio: aspect_ratio || "4:3",
       enhance_prompt: true,
       sequential_image_generation: "disabled"
     };
+    // Seedream은 다중 이미지 입력 지원
     if (Array.isArray(imageUrls) && imageUrls.length > 0) {
       inputData.image_input = imageUrls.map(u => ({ value: u }));
     }
@@ -76,9 +79,9 @@ export default async function handler(req, res) {
     if (Array.isArray(prediction.output)) imageUrl = prediction.output[0];
     else if (typeof prediction.output === "string") imageUrl = prediction.output;
 
-    // Nano Banana의 지연된 출력 대응
+    // Nano Banana는 지연된 출력 처리
     if (model === "google/nano-banana" && !imageUrl && prediction.id) {
-      console.log("Nano Banana output 지연 → 재조회 중...");
+      console.log("⏳ Nano Banana output 지연 → 재조회 중...");
       await new Promise(r => setTimeout(r, 1500));
       const pollRes = await fetch(
         `https://api.replicate.com/v1/predictions/${prediction.id}`,
@@ -100,7 +103,6 @@ export default async function handler(req, res) {
     });
   }
 }
-
 
 /*
 export default async function handler(req, res) {
