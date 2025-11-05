@@ -7,7 +7,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Imagen-4-Fast는 version ID 없이 직접 모델 주소로 POST 요청합니다.
     const response = await fetch(
       "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
       {
@@ -15,12 +14,12 @@ export default async function handler(req, res) {
         headers: {
           Authorization: `Token ${REPLICATE_API_KEY}`,
           "Content-Type": "application/json",
-          Prefer: "wait", // 결과가 완성될 때까지 기다림
+          Prefer: "wait",
         },
         body: JSON.stringify({
           input: {
             prompt: prompt,
-            aspect_ratio: "4:3", // 선택적, 원하면 제거 가능
+            aspect_ratio: "4:3",
           },
         }),
       }
@@ -34,10 +33,11 @@ export default async function handler(req, res) {
     }
 
     const prediction = await response.json();
-    console.log("Replicate raw response:", prediction);
+    console.log("🧩 Replicate raw response:", prediction);
 
-    if (prediction.output && prediction.output.length > 0) {
-      res.status(200).json({ imageUrl: prediction.output[0] });
+    //  output이 문자열로 반환되므로 그대로 사용
+    if (prediction.output) {
+      res.status(200).json({ imageUrl: prediction.output });
     } else {
       throw new Error(`이미지 생성 실패: ${prediction.error || "출력 없음"}`);
     }
@@ -48,7 +48,6 @@ export default async function handler(req, res) {
       .json({ message: error.message || "서버 내부 오류가 발생했습니다." });
   }
 }
-
 
 
 /*
