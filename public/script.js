@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const MODEL_RATIOS = {
     "google/imagen-4-fast": ["1:1", "4:3", "3:2", "16:9"],
-    "google/nano-banana": ["1:1"],
+    "google/nano-banana": ["1:1" , "4:3", "3:4", "16:9" , "9:16"],
     "bytedance/seedream-4": ["1:1", "4:3", "3:4", "16:9"]
   };
 

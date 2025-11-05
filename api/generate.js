@@ -78,7 +78,7 @@ export default async function handler(req, res) {
 
     // Nano Banana의 지연된 출력 대응
     if (model === "google/nano-banana" && !imageUrl && prediction.id) {
-      console.log("⏳ Nano Banana output 지연 → 재조회 중...");
+      console.log("Nano Banana output 지연 → 재조회 중...");
       await new Promise(r => setTimeout(r, 1500));
       const pollRes = await fetch(
         `https://api.replicate.com/v1/predictions/${prediction.id}`,
