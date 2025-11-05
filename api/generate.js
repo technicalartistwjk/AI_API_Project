@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "프롬프트가 없습니다." });
   }
 
-  // ✅ 모델별 엔드포인트 매핑
+  // 모델별 엔드포인트 매핑
   const MODEL_ENDPOINTS = {
     "google/imagen-4-fast": "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
     "google/nano-banana": "https://api.replicate.com/v1/models/google/nano-banana/predictions",
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
   }
 
-  // ✅ 모델별 입력값 구성
+  // 모델별 입력값 구성
   let inputData = { prompt };
   if (model === "google/imagen-4-fast") {
     inputData = {
