@@ -1,73 +1,6 @@
-export default async function handler(req, res) {
-  const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
-  const { prompt, model, aspect_ratio, output_format = "jpg", imageUrls = [] } = req.body;
-
-  if (!prompt)
-    return res.status(400).json({ message: "프롬프트가 없습니다." });
-
-  const MODEL_ENDPOINTS = {
-    "google/imagen-4-fast": "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
-    "google/nano-banana": "https://api.replicate.com/v1/models/google/nano-banana/predictions",
-    "bytedance/seedream-4": "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions"
-  };
-
-  const endpoint = MODEL_ENDPOINTS[model];
-  if (!endpoint)
-    return res.status(400).json({ message: "유효하지 않은 모델입니다." });
-
-  // 이미지 URL만 사용하는 구조
-  const inputData = {
-    prompt,
-    aspect_ratio,
-    output_format
-  };
-
-  if (imageUrls.length > 0)
-    inputData.image_input = imageUrls.map(u => ({ value: u }));
-
-  try {
-    console.log("🚀 [SEND TO REPLICATE]", model, inputData);
-
-    const r = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Token ${REPLICATE_API_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "wait"
-      },
-      body: JSON.stringify({ input: inputData })
-    });
-
-    const pred = await r.json();
-    if (!r.ok) throw new Error(pred.error || "API 요청 실패");
-
-    let urls = [];
-    if (Array.isArray(pred.output)) urls = pred.output;
-    else if (typeof pred.output === "string") urls = [pred.output];
-
-    if (urls.length === 0 && model === "google/nano-banana" && pred.id) {
-      console.log("⌛ Nano Banana 지연 → 재조회...");
-      await new Promise(r => setTimeout(r, 1500));
-      const poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
-        headers: { Authorization: `Token ${REPLICATE_API_KEY}` }
-      });
-      const p = await poll.json();
-      if (Array.isArray(p.output)) urls = p.output;
-      else if (typeof p.output === "string") urls = [p.output];
-    }
-
-    if (!urls.length) throw new Error("이미지 출력이 없습니다.");
-    res.status(200).json({ imageUrls: urls });
-
-  } catch (err) {
-    console.error("서버 오류:", err);
-    res.status(500).json({ message: err.message });
-  }
-}
 
 
-
-/* 생성이미지 기반 변경 가능
+/* 생성이미지 기반 변경 가능*/
 export default async function handler(req, res) {
   const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
   const { prompt, model, aspect_ratio, output_format = "jpg", imageCount = 1, imageUrls = [] } = req.body;
@@ -84,7 +17,7 @@ export default async function handler(req, res) {
   if (!endpoint)
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-  // ✅ base64 업로드 함수
+  //  base64 업로드 함수
   async function uploadToReplicate(base64Data) {
     try {
       const base64Content = base64Data.split(",")[1];
@@ -192,7 +125,7 @@ export default async function handler(req, res) {
     res.status(500).json({ message: err.message });
   }
 }
-*/
+
 
 /*
 export default async function handler(req, res) {

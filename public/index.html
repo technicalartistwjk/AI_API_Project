@@ -1,53 +1,6 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RTE AI Image Generator</title>
-</head>
-<body>
 
-  <h1>RTE AI Image Generator</h1>
 
-  <label for="model-select">모델 선택:</label>
-  <select id="model-select">
-    <option value="google/imagen-4-fast">Google Imagen 4 Fast</option>
-    <option value="google/nano-banana">Google Nano Banana</option>
-    <option value="bytedance/seedream-4">Bytedance Seedream 4</option>
-  </select>
-  <p id="model-info"></p>
-
-  <label for="ratio-select">비율 선택:</label>
-  <select id="ratio-select"></select>
-  <p id="ratio-info"></p>
-
-  <hr>
-
-  <textarea id="prompt-input" rows="4" cols="50" placeholder="이미지 프롬프트를 입력하세요..."></textarea>
-  <br>
-
-  <!-- 이미지 업로드 및 추가 -->
-  <h3>📸 이미지 추가 (결과 이미지 또는 새로운 이미지)</h3>
-  <input type="file" id="image-upload" accept="image/*" multiple>
-  <p id="upload-status"></p>
-
-  <label>
-    <input type="checkbox" id="add-to-input-toggle">
-    이 이미지를 다음 생성 입력에 포함하기
-  </label>
-
-  <br><br>
-  <button id="generate-button">이미지 생성하기</button>
-
-  <hr>
-  <h2>결과 이미지</h2>
-  <div id="result-container"></div>
-
-  <script src="script.js" defer></script>
-</body>
-</html>
-
-<!--생성이미지 기반 변경 가능
+<!--생성이미지 기반 변경 가능-->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -119,7 +72,7 @@
   <script src="script.js" defer></script>
 </body>
 </html>
--->
+
 
 <!--
 <!DOCTYPE html>
