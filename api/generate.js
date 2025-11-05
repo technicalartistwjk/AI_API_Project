@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   if (!endpoint)
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-  // ✅ 안전한 파일 업로드 (Vercel 호환)
+  // ✅ 확실하게 작동하는 파일 업로드 함수 (Vercel 서버 호환)
   async function uploadToReplicate(base64Data) {
     try {
       console.log("📤 [UPLOAD INIT] 데이터 길이:", base64Data?.length || 0);
@@ -39,16 +39,23 @@ export default async function handler(req, res) {
         base64Data.indexOf(":") + 1,
         base64Data.indexOf(";")
       );
+      const ext = mimeType.split("/")[1] || "png";
       const buffer = Buffer.from(base64Content, "base64");
 
       const boundary = "----replicateBoundary" + Math.random().toString(16);
-      const head = Buffer.from(
-        `--${boundary}\r\n` +
-          `Content-Disposition: form-data; name="file"; filename="upload.${mimeType.split("/")[1] || "png"}"\r\n` +
-          `Content-Type: ${mimeType}\r\n\r\n`
+      const bodyParts = [];
+
+      bodyParts.push(Buffer.from(`--${boundary}\r\n`));
+      bodyParts.push(
+        Buffer.from(
+          `Content-Disposition: form-data; name="file"; filename="upload.${ext}"\r\n` +
+            `Content-Type: ${mimeType}\r\n\r\n`
+        )
       );
-      const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
-      const body = Buffer.concat([head, buffer, tail]);
+      bodyParts.push(buffer);
+      bodyParts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+
+      const body = Buffer.concat(bodyParts);
 
       console.log("📦 [UPLOAD TRY] 크기:", body.length, "bytes");
 
@@ -87,7 +94,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // Base64 → Replicate 파일 URL 변환
+  // ✅ base64 → Replicate 파일 URL 변환
   let uploadedUrls = [];
   for (const img of imageUrls) {
     if (img.startsWith("data:image/")) {
@@ -150,7 +157,7 @@ export default async function handler(req, res) {
     if (Array.isArray(pred.output)) urls = pred.output;
     else if (typeof pred.output === "string") urls = [pred.output];
 
-    // ✅ nano-banana의 지연 응답 처리
+    // ✅ Nano-banana는 간혹 지연 응답 → 재조회
     if (model === "google/nano-banana" && urls.length === 0 && pred.id) {
       console.log("⌛ Nano Banana 지연 → 재조회 중...");
       await new Promise((r) => setTimeout(r, 2000));
