@@ -1,48 +1,55 @@
+import FormData from "form-data";
+
 export default async function handler(req, res) {
   const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
-  const { prompt, model, aspect_ratio, output_format, imageCount = 1, imageUrls = [] } = req.body;
+  const { prompt, model, aspect_ratio, output_format = "jpg", imageCount = 1, imageUrls = [] } = req.body;
 
   if (!prompt)
     return res.status(400).json({ message: "프롬프트가 없습니다." });
 
-  const ENDPOINTS = {
+  const MODEL_ENDPOINTS = {
     "google/imagen-4-fast": "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
     "google/nano-banana": "https://api.replicate.com/v1/models/google/nano-banana/predictions",
     "bytedance/seedream-4": "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions"
   };
-  const endpoint = ENDPOINTS[model];
+
+  const endpoint = MODEL_ENDPOINTS[model];
   if (!endpoint)
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-  // ✅ base64 -> Replicate 파일 업로드
+  // ✅ base64 이미지를 Replicate 서버로 업로드 (Node 전용 방식)
   async function uploadToReplicate(base64Data) {
     try {
-      const base64Content = base64Data.split(',')[1];
+      const base64Content = base64Data.split(",")[1];
       const buffer = Buffer.from(base64Content, "base64");
+
+      const formData = new FormData();
+      formData.append("file", buffer, { filename: "upload.png" });
+
       const response = await fetch("https://api.replicate.com/v1/files", {
         method: "POST",
         headers: {
-          Authorization: `Token ${REPLICATE_API_KEY}`
+          Authorization: `Token ${REPLICATE_API_KEY}`,
+          ...formData.getHeaders()
         },
-        body: (() => {
-          const formData = new FormData();
-          formData.append("file", new Blob([buffer]), "upload.png");
-          return formData;
-        })()
+        body: formData
       });
+
       if (!response.ok) {
         const errText = await response.text();
         throw new Error(`파일 업로드 실패: ${errText}`);
       }
+
       const json = await response.json();
-      return json.url; // ✅ 업로드된 URL 반환
+      console.log("🧩 Replicate 업로드 결과:", json.url);
+      return json.url;
     } catch (err) {
       console.error("파일 업로드 오류:", err);
       return null;
     }
   }
 
-  // base64 이미지들을 Replicate에 업로드하여 URL 배열 생성
+  // 업로드 프로세스 (Replicate URL로 변환)
   let uploadedUrls = [];
   for (const img of imageUrls) {
     if (img.startsWith("data:image/")) {
@@ -53,7 +60,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // 모델별 입력 구성
+  // 모델별 입력 데이터 구성
   let inputData = { prompt };
   if (model === "google/imagen-4-fast") {
     inputData = { prompt, aspect_ratio, output_format, safety_filter_level: "block_only_high" };
@@ -91,6 +98,7 @@ export default async function handler(req, res) {
     if (Array.isArray(pred.output)) urls = pred.output;
     else if (typeof pred.output === "string") urls = [pred.output];
 
+    // Nano Banana 출력 지연 처리
     if (model === "google/nano-banana" && urls.length === 0 && pred.id) {
       await new Promise(r => setTimeout(r, 1500));
       const poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
