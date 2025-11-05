@@ -1,6 +1,43 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RTE AI API Tool</title>
+</head>
+<body>
+
+  <h1>RTE AI Test Tool</h1>
+
+  <label for="model-select">모델 선택:</label>
+  <select id="model-select">
+    <option value="google/imagen-4-fast">Google Imagen 4 Fast</option>
+    <option value="google/nano-banana">Google Nano Banana</option>
+    <option value="bytedance/seedream-4">Bytedance Seedream 4</option>
+  </select>
+
+  <br><br>
+
+  <textarea id="prompt-input" rows="4" cols="50" placeholder="생성할 이미지의 프롬프트를 입력하세요... (예: a red car)"></textarea>
+  
+  <br>
+  <button id="generate-button">이미지 생성하기</button>
+  <hr>
+
+  <h2>결과 이미지</h2>
+  <img id="result-image" src="" alt="생성된 이미지가 여기에 표시됩니다." width="512">
+
+  <script src="script.js" defer></script>
+
+</body>
+</html>
+
+
+
+<!-- Start Code
+<!DOCTYPE html>
+<html lang="ko">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RTE AI API Tool</title>
@@ -25,3 +62,4 @@
 
 </body>
 </html>
+-->

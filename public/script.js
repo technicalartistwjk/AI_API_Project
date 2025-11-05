@@ -1,4 +1,62 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const promptInput = document.getElementById('prompt-input');
+  const generateButton = document.getElementById('generate-button');
+  const resultImage = document.getElementById('result-image');
+  const modelSelect = document.getElementById('model-select');
+
+  generateButton.addEventListener('click', handleImageGeneration);
+
+  async function handleImageGeneration() {
+    const promptText = promptInput.value;
+    const selectedModel = modelSelect.value;
+
+    if (!promptText) {
+      alert('프롬프트를 입력해주세요!');
+      return;
+    }
+
+    setLoadingState(true);
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: promptText,
+          model: selectedModel
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'API 요청 실패');
+      }
+
+      const data = await response.json();
+      resultImage.src = data.imageUrl;
+
+    } catch (error) {
+      console.error('처리 중 에러 발생:', error);
+      alert(error.message);
+    } finally {
+      setLoadingState(false);
+    }
+  }
+
+  function setLoadingState(isLoading) {
+    if (isLoading) {
+      generateButton.textContent = '이미지 생성 중...';
+      generateButton.disabled = true;
+      resultImage.src = "";
+    } else {
+      generateButton.textContent = '이미지 생성하기';
+      generateButton.disabled = false;
+    }
+  }
+});
+
+/* Start Code
+document.addEventListener('DOMContentLoaded', () => {
 
     const promptInput = document.getElementById('prompt-input');
     const generateButton = document.getElementById('generate-button');
@@ -56,3 +114,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+*/
