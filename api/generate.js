@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
   }
 
-  // 모델별 입력 구성
+  // 모델별 입력값 구성
   let inputData = { prompt };
 
   if (model === "google/imagen-4-fast") {
@@ -33,8 +33,8 @@ export default async function handler(req, res) {
       aspect_ratio: aspect_ratio || "1:1",
       output_format: "jpg"
     };
-    if (imageUrls.length > 0) {
-      inputData.image_input = imageUrls.map(url => ({ value: url }));
+    if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+      inputData.image_input = imageUrls.map(u => ({ value: u }));
     }
   } else if (model === "bytedance/seedream-4") {
     inputData = {
@@ -42,13 +42,14 @@ export default async function handler(req, res) {
       width: 2048,
       height: 2048,
       prompt,
-      max_images: Math.min(imageUrls.length || 1, 3),
+      max_images: 1,
+      image_input: [],
       aspect_ratio: aspect_ratio || "4:3",
       enhance_prompt: true,
       sequential_image_generation: "disabled"
     };
-    if (imageUrls.length > 0) {
-      inputData.image_input = imageUrls.map(url => ({ value: url }));
+    if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+      inputData.image_input = imageUrls.map(u => ({ value: u }));
     }
   }
 
@@ -75,7 +76,9 @@ export default async function handler(req, res) {
     if (Array.isArray(prediction.output)) imageUrl = prediction.output[0];
     else if (typeof prediction.output === "string") imageUrl = prediction.output;
 
+    // Nano Banana의 지연된 출력 대응
     if (model === "google/nano-banana" && !imageUrl && prediction.id) {
+      console.log("⏳ Nano Banana output 지연 → 재조회 중...");
       await new Promise(r => setTimeout(r, 1500));
       const pollRes = await fetch(
         `https://api.replicate.com/v1/predictions/${prediction.id}`,
@@ -86,13 +89,15 @@ export default async function handler(req, res) {
       else if (typeof polled.output === "string") imageUrl = polled.output;
     }
 
-    if (!imageUrl) throw new Error("이미지 출력이 없습니다.");
+    if (!imageUrl) throw new Error("이미지 출력이 없습니다. (출력 형식 불명 또는 지연)");
 
     res.status(200).json({ imageUrl });
 
   } catch (error) {
     console.error("서버 내부 오류:", error);
-    res.status(500).json({ message: error.message || "서버 내부 오류가 발생했습니다." });
+    res.status(500).json({
+      message: error.message || "서버 내부 오류가 발생했습니다."
+    });
   }
 }
 
