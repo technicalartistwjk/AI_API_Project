@@ -14,34 +14,26 @@ export default async function handler(req, res) {
   if (!endpoint)
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-  // ✅ Vercel 환경에서도 동작하는 base64 → Blob 업로드 방식
+  // ✅ base64 업로드 함수
   async function uploadToReplicate(base64Data) {
     try {
       const base64Content = base64Data.split(",")[1];
       const buffer = Buffer.from(base64Content, "base64");
       const blob = new Blob([buffer]);
-
       const formData = new FormData();
       formData.append("file", blob, "upload.png");
 
       const response = await fetch("https://api.replicate.com/v1/files", {
         method: "POST",
-        headers: {
-          Authorization: `Token ${REPLICATE_API_KEY}`
-        },
+        headers: { Authorization: `Token ${REPLICATE_API_KEY}` },
         body: formData
       });
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`파일 업로드 실패: ${errText}`);
-      }
-
       const json = await response.json();
-      console.log("🧩 Replicate 업로드 결과:", json.url);
+      if (!response.ok) throw new Error(json.detail || JSON.stringify(json));
       return json.url;
     } catch (err) {
-      console.error("파일 업로드 오류:", err);
+      console.error("파일 업로드 실패:", err);
       return null;
     }
   }
@@ -55,13 +47,24 @@ export default async function handler(req, res) {
     } else uploadedUrls.push(img);
   }
 
+  // 모델별 입력 구성
   let inputData = { prompt };
+
   if (model === "google/imagen-4-fast") {
-    inputData = { prompt, aspect_ratio, output_format, safety_filter_level: "block_only_high" };
+    inputData = {
+      prompt,
+      aspect_ratio: aspect_ratio || "4:3",
+      output_format,
+      safety_filter_level: "block_only_high"
+    };
   } else if (model === "google/nano-banana") {
-    inputData = { prompt, aspect_ratio, output_format };
+    inputData = {
+      prompt,
+      aspect_ratio: "1:1", //  이 모델은 1:1만 지원
+      output_format
+    };
     if (uploadedUrls.length > 0)
-      inputData.image_input = uploadedUrls.map(v => ({ value: v }));
+      inputData.image_input = uploadedUrls; //  수정: 단순 배열
   } else if (model === "bytedance/seedream-4") {
     inputData = {
       size: "2K",
@@ -69,29 +72,38 @@ export default async function handler(req, res) {
       height: 2048,
       prompt,
       max_images: imageCount,
-      aspect_ratio,
+      aspect_ratio: aspect_ratio || "4:3",
       output_format,
       enhance_prompt: true,
       sequential_image_generation: "disabled"
     };
     if (uploadedUrls.length > 0)
-      inputData.image_input = uploadedUrls.map(v => ({ value: v }));
+      inputData.image_input = uploadedUrls; // 수정: 단순 배열
   }
 
   try {
     const r = await fetch(endpoint, {
       method: "POST",
-      headers: { Authorization: `Token ${REPLICATE_API_KEY}`, "Content-Type": "application/json", Prefer: "wait" },
+      headers: {
+        Authorization: `Token ${REPLICATE_API_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "wait"
+      },
       body: JSON.stringify({ input: inputData })
     });
 
     const pred = await r.json();
-    if (!r.ok) throw new Error(pred.error || "API 요청 실패");
+
+    if (!r.ok) {
+      console.error(" Replicate 응답:", pred);
+      throw new Error(pred.error || pred.detail || "API 요청 실패");
+    }
 
     let urls = [];
     if (Array.isArray(pred.output)) urls = pred.output;
     else if (typeof pred.output === "string") urls = [pred.output];
 
+    // Nano Banana 지연 대응
     if (model === "google/nano-banana" && urls.length === 0 && pred.id) {
       await new Promise(r => setTimeout(r, 1500));
       const poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
@@ -104,6 +116,7 @@ export default async function handler(req, res) {
 
     if (!urls.length) throw new Error("이미지 출력이 없습니다.");
     res.status(200).json({ imageUrls: urls });
+
   } catch (err) {
     console.error("서버 오류:", err);
     res.status(500).json({ message: err.message });
