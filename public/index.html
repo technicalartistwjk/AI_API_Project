@@ -25,31 +25,51 @@
 
   <textarea id="prompt-input" rows="4" cols="50" placeholder="이미지 프롬프트를 입력하세요..."></textarea>
 
-  <br>
-  <button id="generate-button">이미지 생성하기</button>
+  <label for="format-select">출력 포맷:</label>
+  <select id="format-select">
+    <option value="jpg">JPG</option>
+    <option value="png">PNG</option>
+    <option value="webp">WEBP</option>
+  </select>
+
+  <label for="image-count">생성 개수:</label>
+  <select id="image-count">
+    <option value="1">1장</option>
+    <option value="2">2장</option>
+    <option value="3">3장</option>
+    <option value="4">4장</option>
+    <option value="5">5장</option>
+  </select>
+  <p id="count-info" style="font-size:0.9em; color:gray;"></p>
 
   <hr>
 
-  <!-- 이미지 업로드 영역 -->
   <div id="image-upload-section">
     <h3>📸 이미지 추가 (결과 이미지 또는 새로운 이미지)</h3>
     <input type="file" id="image-upload" accept="image/*" multiple>
     <p id="image-limit-text" style="font-size:0.9em; color:gray;"></p>
   </div>
 
-  <h2>결과 이미지</h2>
-  <img id="result-image" src="" alt="생성된 이미지가 여기에 표시됩니다." width="512">
-
-    <div id="add-to-input-container">
+  <div id="add-to-input-container">
     <label>
       <input type="checkbox" id="add-to-input-toggle">
       이 이미지를 다음 생성 입력에 포함하기
     </label>
   </div>
 
+  <hr>
+
+  <button id="generate-button">이미지 생성하기</button>
+  <button id="download-button" disabled>이미지 다운로드</button>
+
+  <h2>결과 이미지</h2>
+  <div id="result-container"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="script.js" defer></script>
 </body>
 </html>
+
 
 <!--
 <!DOCTYPE html>

@@ -1,108 +1,70 @@
 export default async function handler(req, res) {
   const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
-  const { prompt, model, aspect_ratio, imageUrls = [] } = req.body;
+  const { prompt, model, aspect_ratio, output_format, imageCount = 1, imageUrls = [] } = req.body;
 
-  if (!prompt) {
-    return res.status(400).json({ message: "프롬프트가 없습니다." });
-  }
+  if (!prompt) return res.status(400).json({ message: "프롬프트가 없습니다." });
 
-  const MODEL_ENDPOINTS = {
+  const ENDPOINTS = {
     "google/imagen-4-fast": "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
     "google/nano-banana": "https://api.replicate.com/v1/models/google/nano-banana/predictions",
     "bytedance/seedream-4": "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions"
   };
 
-  const targetEndpoint = MODEL_ENDPOINTS[model];
-  if (!targetEndpoint) {
-    return res.status(400).json({ message: "유효하지 않은 모델입니다." });
-  }
+  const endpoint = ENDPOINTS[model];
+  if (!endpoint) return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
   let inputData = { prompt };
-
-  // ✅ 각 모델별 입력값 구성 (Fast 모델은 imageUrls 무시)
   if (model === "google/imagen-4-fast") {
-    inputData = {
-      prompt,
-      aspect_ratio: aspect_ratio || "4:3",
-      output_format: "jpg",
-      safety_filter_level: "block_only_high"
-    };
-  } 
-  else if (model === "google/nano-banana") {
-    inputData = {
-      prompt,
-      aspect_ratio: aspect_ratio || "1:1",
-      output_format: "jpg"
-    };
-    // Nano Banana는 이미지 기반 입력 지원
-    if (Array.isArray(imageUrls) && imageUrls.length > 0) {
-      inputData.image_input = imageUrls.map(u => ({ value: u }));
-    }
-  } 
-  else if (model === "bytedance/seedream-4") {
+    inputData = { prompt, aspect_ratio, output_format, safety_filter_level: "block_only_high" };
+  } else if (model === "google/nano-banana") {
+    inputData = { prompt, aspect_ratio, output_format };
+    if (Array.isArray(imageUrls) && imageUrls.length > 0) inputData.image_input = imageUrls.map(v => ({ value: v }));
+  } else if (model === "bytedance/seedream-4") {
     inputData = {
       size: "2K",
       width: 2048,
       height: 2048,
       prompt,
-      max_images: 1,
-      aspect_ratio: aspect_ratio || "4:3",
+      max_images: imageCount,
+      aspect_ratio,
+      output_format,
       enhance_prompt: true,
       sequential_image_generation: "disabled"
     };
-    // Seedream은 다중 이미지 입력 지원
-    if (Array.isArray(imageUrls) && imageUrls.length > 0) {
-      inputData.image_input = imageUrls.map(u => ({ value: u }));
-    }
+    if (Array.isArray(imageUrls) && imageUrls.length > 0) inputData.image_input = imageUrls.map(v => ({ value: v }));
   }
 
   try {
-    const response = await fetch(targetEndpoint, {
+    const r = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        Authorization: `Token ${REPLICATE_API_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "wait"
-      },
+      headers: { Authorization: `Token ${REPLICATE_API_KEY}`, "Content-Type": "application/json", Prefer: "wait" },
       body: JSON.stringify({ input: inputData })
     });
+    const pred = await r.json();
+    if (!r.ok) throw new Error(pred.error || "API 요청 실패");
 
-    if (!response.ok) {
-      const errorDetails = await response.text();
-      throw new Error(`API 요청 실패: ${response.statusText} (세부: ${errorDetails})`);
-    }
+    let urls = [];
+    if (Array.isArray(pred.output)) urls = pred.output;
+    else if (typeof pred.output === "string") urls = [pred.output];
 
-    const prediction = await response.json();
-    console.log("🧩 Model response:", prediction);
-
-    let imageUrl = null;
-    if (Array.isArray(prediction.output)) imageUrl = prediction.output[0];
-    else if (typeof prediction.output === "string") imageUrl = prediction.output;
-
-    // Nano Banana는 지연된 출력 처리
-    if (model === "google/nano-banana" && !imageUrl && prediction.id) {
-      console.log("⏳ Nano Banana output 지연 → 재조회 중...");
+    if (model === "google/nano-banana" && urls.length === 0 && pred.id) {
       await new Promise(r => setTimeout(r, 1500));
-      const pollRes = await fetch(
-        `https://api.replicate.com/v1/predictions/${prediction.id}`,
-        { headers: { Authorization: `Token ${REPLICATE_API_KEY}` } }
-      );
-      const polled = await pollRes.json();
-      if (Array.isArray(polled.output)) imageUrl = polled.output[0];
-      else if (typeof polled.output === "string") imageUrl = polled.output;
+      const poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
+        headers: { Authorization: `Token ${REPLICATE_API_KEY}` }
+      });
+      const p = await poll.json();
+      if (Array.isArray(p.output)) urls = p.output;
+      else if (typeof p.output === "string") urls = [p.output];
     }
 
-    if (!imageUrl) throw new Error("이미지 출력이 없습니다. (출력 형식 불명 또는 지연)");
-
-    res.status(200).json({ imageUrl });
-
-  } catch (error) {
-    console.error("서버 내부 오류:", error);
-    res.status(500).json({
-      message: error.message || "서버 내부 오류가 발생했습니다."
-    });
+    if (!urls.length) throw new Error("이미지 출력이 없습니다.");
+    res.status(200).json({ imageUrls: urls });
+  } catch (err) {
+    console.error("서버 오류:", err);
+    res.status(500).json({ message: err.message });
   }
 }
+
 
 /*
 export default async function handler(req, res) {

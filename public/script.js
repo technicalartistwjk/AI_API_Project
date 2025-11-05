@@ -1,15 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const modelSelect = document.getElementById('model-select');
+  const ratioSelect = document.getElementById('ratio-select');
+  const modelInfo = document.getElementById('model-info');
+  const ratioInfo = document.getElementById('ratio-info');
   const promptInput = document.getElementById('prompt-input');
   const generateButton = document.getElementById('generate-button');
-  const resultImage = document.getElementById('result-image');
-  const modelSelect = document.getElementById('model-select');
-  const modelInfo = document.getElementById('model-info');
-  const ratioSelect = document.getElementById('ratio-select');
-  const ratioInfo = document.getElementById('ratio-info');
+  const resultContainer = document.getElementById('result-container');
+  const downloadButton = document.getElementById('download-button');
+  const imageUpload = document.getElementById('image-upload');
   const addToInputToggle = document.getElementById('add-to-input-toggle');
-  const addContainer = document.getElementById('add-to-input-container');
+  const formatSelect = document.getElementById('format-select');
+  const imageCount = document.getElementById('image-count');
+  const countInfo = document.getElementById('count-info');
 
-  let autoAddedImage = null; // 자동 저장 이미지 (토글용)
+  let autoAddedImage = null;
+  let generatedImages = [];
 
   const MODEL_INFO = {
     "google/imagen-4-fast": "Google Imagen 4 Fast — 약 $0.02(28.9원) / 빠른 속도, 보통 화질",
@@ -23,99 +28,121 @@ document.addEventListener('DOMContentLoaded', () => {
     "bytedance/seedream-4": ["1:1", "4:3", "3:4", "16:9"]
   };
 
-  // 모델 변경 시 라벨, 비율, 이미지 입력 토글 상태 갱신
+  const MULTI_IMAGE_SUPPORT = {
+    "google/imagen-4-fast": false,
+    "google/nano-banana": true,
+    "bytedance/seedream-4": true
+  };
+
   modelSelect.addEventListener('change', () => {
     const selectedModel = modelSelect.value;
-    modelInfo.textContent = MODEL_INFO[selectedModel] || "";
+    modelInfo.textContent = MODEL_INFO[selectedModel];
 
-    // 비율 드롭다운 갱신
     ratioSelect.innerHTML = "";
-    MODEL_RATIOS[selectedModel].forEach(ratio => {
-      const option = document.createElement('option');
-      option.value = ratio;
-      option.textContent = ratio;
-      ratioSelect.appendChild(option);
+    MODEL_RATIOS[selectedModel].forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r;
+      opt.textContent = r;
+      ratioSelect.appendChild(opt);
     });
     ratioInfo.textContent = `지원 비율: ${MODEL_RATIOS[selectedModel].join(", ")}`;
 
-    // ✅ 이미지 입력 가능 여부에 따라 토글 비활성화
-    if (selectedModel === "google/imagen-4-fast") {
-      addToInputToggle.checked = false;
-      addToInputToggle.disabled = true;
-      addContainer.style.opacity = "0.5";
-      addContainer.title = "이 모델은 이미지 추가를 지원하지 않습니다.";
-    } else {
-      addToInputToggle.disabled = false;
-      addContainer.style.opacity = "1.0";
-      addContainer.title = "";
-    }
+    const disableImageInput = selectedModel === "google/imagen-4-fast";
+    imageUpload.disabled = disableImageInput;
+    addToInputToggle.disabled = disableImageInput;
+    document.getElementById("image-upload-section").style.opacity = disableImageInput ? "0.5" : "1.0";
+    document.getElementById("add-to-input-container").style.opacity = disableImageInput ? "0.5" : "1.0";
+
+    const supportsMulti = MULTI_IMAGE_SUPPORT[selectedModel];
+    imageCount.disabled = !supportsMulti;
+    countInfo.textContent = supportsMulti ? "최대 5장까지 생성 가능" : "이 모델은 단일 이미지만 생성 가능합니다.";
   });
 
-  // 페이지 초기 상태 세팅
   modelSelect.dispatchEvent(new Event('change'));
 
-  // 버튼 클릭 시 이미지 생성
-  generateButton.addEventListener('click', handleImageGeneration);
+  generateButton.addEventListener('click', handleGenerate);
+  downloadButton.addEventListener('click', handleDownload);
 
-  async function handleImageGeneration() {
-    const promptText = promptInput.value;
-    const selectedModel = modelSelect.value;
-    const selectedRatio = ratioSelect.value;
-
-    if (!promptText) {
-      alert('프롬프트를 입력해주세요!');
+  async function handleGenerate() {
+    const prompt = promptInput.value;
+    const model = modelSelect.value;
+    const aspect_ratio = ratioSelect.value;
+    const output_format = formatSelect.value;
+    const count = parseInt(imageCount.value);
+    if (!prompt) {
+      alert("프롬프트를 입력해주세요!");
       return;
     }
 
-    let imageUrls = [];
+    resultContainer.innerHTML = "";
+    generatedImages = [];
+    downloadButton.disabled = true;
+    generateButton.disabled = true;
+    generateButton.textContent = "이미지 생성 중...";
 
-    // ✅ Fast 모델은 이미지 추가 완전 차단
-    if (selectedModel !== "google/imagen-4-fast") {
-      if (addToInputToggle && addToInputToggle.checked && autoAddedImage) {
-        imageUrls.push(autoAddedImage);
+    const imageUrls = [];
+    if (addToInputToggle.checked && autoAddedImage) {
+      imageUrls.push(autoAddedImage);
+    }
+    if (!imageUpload.disabled && imageUpload.files.length > 0) {
+      for (const file of imageUpload.files) {
+        const base64 = await fileToBase64(file);
+        imageUrls.push(base64);
       }
     }
 
-    setLoadingState(true);
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, model, aspect_ratio, output_format, imageCount: count, imageUrls })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.message || "API 오류");
+      return;
+    }
 
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: promptText,
-          model: selectedModel,
-          aspect_ratio: selectedRatio,
-          imageUrls
-        })
-      });
+    const urls = data.imageUrls || [data.imageUrl];
+    urls.forEach(url => {
+      const img = document.createElement("img");
+      img.src = url;
+      img.width = 512;
+      resultContainer.appendChild(img);
+    });
+    generatedImages = urls;
+    autoAddedImage = urls[0];
+    downloadButton.disabled = false;
+    generateButton.textContent = "이미지 생성하기";
+    generateButton.disabled = false;
+  }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'API 요청 실패');
+  async function handleDownload() {
+    if (generatedImages.length === 1) {
+      const link = document.createElement("a");
+      link.href = generatedImages[0];
+      link.download = "generated_image.jpg";
+      link.click();
+    } else if (generatedImages.length > 1) {
+      const zip = new JSZip();
+      let i = 1;
+      for (const url of generatedImages) {
+        const blob = await fetch(url).then(r => r.blob());
+        zip.file(`image_${i++}.jpg`, blob);
       }
-
-      const data = await response.json();
-      resultImage.src = data.imageUrl;
-      autoAddedImage = data.imageUrl; // ✅ 다음 요청에 자동 포함될 이미지 저장
-
-    } catch (error) {
-      console.error('처리 중 에러 발생:', error);
-      alert(error.message);
-    } finally {
-      setLoadingState(false);
+      const content = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(content);
+      link.download = "generated_images.zip";
+      link.click();
     }
   }
 
-  function setLoadingState(isLoading) {
-    if (isLoading) {
-      generateButton.textContent = '이미지 생성 중...';
-      generateButton.disabled = true;
-      resultImage.src = "";
-    } else {
-      generateButton.textContent = '이미지 생성하기';
-      generateButton.disabled = false;
-    }
+  function fileToBase64(file) {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
   }
 });
 
