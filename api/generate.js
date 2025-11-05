@@ -3,55 +3,50 @@ export default async function handler(req, res) {
   const { prompt } = req.body;
 
   if (!prompt) {
-    return res.status(400).json({ message: '프롬프트가 없습니다.' });
+    return res.status(400).json({ message: "프롬프트가 없습니다." });
   }
 
   try {
-    // 1 Replicate에 이미지 생성 요청 보내기
-    const startResponse = await fetch('https://api.replicate.com/v1/predictions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${REPLICATE_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        version: "8b88b46d58a4d2f729b2e9045d95bbebee9f4507b87a6e6f648e5b0b77c7b518", // imagen-4-fast 버전 ID
-        input: { prompt }
-      })
-    });
+    // Imagen-4-Fast는 version ID 없이 직접 모델 주소로 POST 요청합니다.
+    const response = await fetch(
+      "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${REPLICATE_API_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "wait", // 결과가 완성될 때까지 기다림
+        },
+        body: JSON.stringify({
+          input: {
+            prompt: prompt,
+            aspect_ratio: "4:3", // 선택적, 원하면 제거 가능
+          },
+        }),
+      }
+    );
 
-    if (!startResponse.ok) {
-      const details = await startResponse.text();
-      throw new Error(`요청 실패: ${startResponse.statusText}\n세부: ${details}`);
+    if (!response.ok) {
+      const errorDetails = await response.text();
+      throw new Error(
+        `API 요청 실패: ${response.statusText} (세부: ${errorDetails})`
+      );
     }
 
-    let prediction = await startResponse.json();
-    const predictionId = prediction.id;
+    const prediction = await response.json();
 
-    // 2 결과가 나올 때까지 1초마다 확인
-    while (prediction.status !== "succeeded" && prediction.status !== "failed") {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const resultResponse = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
-        headers: { 'Authorization': `Token ${REPLICATE_API_KEY}` }
-      });
-
-      prediction = await resultResponse.json();
-    }
-
-    // 3️최종 결과 반환
-    if (prediction.status === "succeeded" && prediction.output && prediction.output.length > 0) {
+    if (prediction.output && prediction.output.length > 0) {
       res.status(200).json({ imageUrl: prediction.output[0] });
     } else {
-      throw new Error(`이미지 생성 실패: ${prediction.error || "출력 데이터 없음"}`);
+      throw new Error(`이미지 생성 실패: ${prediction.error || "출력 없음"}`);
     }
-
   } catch (error) {
     console.error("서버 내부 오류:", error);
-    res.status(500).json({ message: error.message });
+    res
+      .status(500)
+      .json({ message: error.message || "서버 내부 오류가 발생했습니다." });
   }
 }
-
 
 
 
