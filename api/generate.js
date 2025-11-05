@@ -12,7 +12,6 @@ export default async function handler(req, res) {
   if (!prompt)
     return res.status(400).json({ message: "프롬프트가 없습니다." });
 
-  // 모델 엔드포인트
   const MODEL_ENDPOINTS = {
     "google/imagen-4-fast":
       "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
@@ -25,14 +24,13 @@ export default async function handler(req, res) {
   if (!endpoint)
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-  // ✅ Vercel 환경 호환: 직접 multipart 바디 구성
+  // ✅ Vercel 호환 파일 업로드 (직접 multipart body 구성)
   async function uploadToReplicate(base64Data) {
     try {
       const base64Content = base64Data.split(",")[1];
       const buffer = Buffer.from(base64Content, "base64");
-
-      // multipart/form-data 수동 구성
       const boundary = "----replicateBoundary" + Math.random().toString(16);
+
       const body = Buffer.concat([
         Buffer.from(`--${boundary}\r\n`),
         Buffer.from('Content-Disposition: form-data; name="file"; filename="upload.png"\r\n'),
@@ -54,7 +52,7 @@ export default async function handler(req, res) {
       if (!response.ok)
         throw new Error(json.detail || JSON.stringify(json));
 
-      console.log("🧩 Replicate 업로드 성공:", json.url);
+      console.log("🧩 [UPLOAD OK] Replicate URL:", json.url);
       return json.url;
     } catch (err) {
       console.error("파일 업로드 실패:", err);
@@ -62,7 +60,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // base64 → URL 변환
+  // base64 → Replicate 파일 URL 변환
   let uploadedUrls = [];
   for (const img of imageUrls) {
     if (img.startsWith("data:image/")) {
@@ -71,7 +69,7 @@ export default async function handler(req, res) {
     } else uploadedUrls.push(img);
   }
 
-  // 모델별 입력 데이터
+  //  모델별로 image_input 구조를 다르게 설정
   let inputData = { prompt };
 
   if (model === "google/imagen-4-fast") {
@@ -84,11 +82,16 @@ export default async function handler(req, res) {
   } else if (model === "google/nano-banana") {
     inputData = {
       prompt,
-      aspect_ratio: "1:1",
+      aspect_ratio: aspect_ratio || "1:1",
       output_format,
     };
-    if (uploadedUrls.length > 0)
-      inputData.image_input = uploadedUrls;
+
+    if (uploadedUrls.length > 0) {
+      inputData.image_input = uploadedUrls.map((u) => ({
+        type: "image",
+        value: u,
+      }));
+    }
   } else if (model === "bytedance/seedream-4") {
     inputData = {
       size: "2K",
@@ -101,9 +104,13 @@ export default async function handler(req, res) {
       enhance_prompt: true,
       sequential_image_generation: "disabled",
     };
-    if (uploadedUrls.length > 0)
-      inputData.image_input = uploadedUrls;
+
+    if (uploadedUrls.length > 0) {
+      inputData.image_input = uploadedUrls; // 단순 URL 배열
+    }
   }
+
+  console.log("🚀 [SEND TO REPLICATE]", model, inputData);
 
   try {
     const r = await fetch(endpoint, {
@@ -117,17 +124,20 @@ export default async function handler(req, res) {
     });
 
     const pred = await r.json();
+    console.log("📥 [REPLICATE RESPONSE]", pred);
+
     if (!r.ok) {
-      console.error(" Replicate 응답:", pred);
       throw new Error(pred.error || pred.detail || "API 요청 실패");
     }
 
-    // 결과 정리
+    // 출력 확인
     let urls = [];
     if (Array.isArray(pred.output)) urls = pred.output;
     else if (typeof pred.output === "string") urls = [pred.output];
 
+    // Nano Banana 출력 지연 대응
     if (model === "google/nano-banana" && urls.length === 0 && pred.id) {
+      console.log("⌛ Nano Banana 지연 → 재조회...");
       await new Promise((r) => setTimeout(r, 1500));
       const poll = await fetch(
         `https://api.replicate.com/v1/predictions/${pred.id}`,
@@ -136,6 +146,7 @@ export default async function handler(req, res) {
       const p = await poll.json();
       if (Array.isArray(p.output)) urls = p.output;
       else if (typeof p.output === "string") urls = [p.output];
+      console.log("✅ [폴링 후 출력]", urls);
     }
 
     if (!urls.length) throw new Error("이미지 출력이 없습니다.");
