@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
-  const { prompt, model } = req.body;
+  const { prompt, model, aspect_ratio } = req.body; // ✅ ratio 값도 함께 받기
 
   if (!prompt) {
     return res.status(400).json({ message: "프롬프트가 없습니다." });
@@ -18,36 +18,37 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
   }
 
-  // 모델별 입력값 구성
-let inputData = { prompt };
+  // 모델별 입력값 구성 (ratio를 동적으로 반영)
+  let inputData = { prompt };
 
-if (model === "google/imagen-4-fast") {
-  inputData = {
-    prompt,
-    aspect_ratio: "4:3",
-    output_format: "jpg",
-    safety_filter_level: "block_only_high"
-  };
-} else if (model === "google/nano-banana") {
-  inputData = {
-    prompt,
-    // 기존: aspect_ratio: "match_image",
-    aspect_ratio: "4:3", //실제로 지원되는 값으로 변경
-    output_format: "jpg"
-  };
-} else if (model === "bytedance/seedream-4") {
-  inputData = {
-    size: "2K",
-    width: 2048,
-    height: 2048,
-    prompt,
-    max_images: 1,
-    image_input: [],
-    aspect_ratio: "4:3",
-    enhance_prompt: true,
-    sequential_image_generation: "disabled"
-  };
-}
+  if (model === "google/imagen-4-fast") {
+    inputData = {
+      prompt,
+      aspect_ratio: aspect_ratio || "4:3", // 사용자가 선택한 값
+      output_format: "jpg",
+      safety_filter_level: "block_only_high"
+    };
+  } 
+  else if (model === "google/nano-banana") {
+    inputData = {
+      prompt,
+      aspect_ratio: aspect_ratio || "1:1", // 기본값 1:1
+      output_format: "jpg"
+    };
+  } 
+  else if (model === "bytedance/seedream-4") {
+    inputData = {
+      size: "2K",
+      width: 2048,
+      height: 2048,
+      prompt,
+      max_images: 1,
+      image_input: [],
+      aspect_ratio: aspect_ratio || "4:3", // 선택된 값 반영
+      enhance_prompt: true,
+      sequential_image_generation: "disabled"
+    };
+  }
 
   try {
     const response = await fetch(targetEndpoint, {
@@ -81,6 +82,7 @@ if (model === "google/imagen-4-fast") {
     res.status(500).json({ message: error.message || "서버 내부 오류가 발생했습니다." });
   }
 }
+
 
 /* Start Code
 export default async function handler(req, res) {
