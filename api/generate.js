@@ -1,5 +1,3 @@
-import FormData from "form-data";
-
 export default async function handler(req, res) {
   const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
   const { prompt, model, aspect_ratio, output_format = "jpg", imageCount = 1, imageUrls = [] } = req.body;
@@ -12,25 +10,24 @@ export default async function handler(req, res) {
     "google/nano-banana": "https://api.replicate.com/v1/models/google/nano-banana/predictions",
     "bytedance/seedream-4": "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions"
   };
-
   const endpoint = MODEL_ENDPOINTS[model];
   if (!endpoint)
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-  // ✅ base64 이미지를 Replicate 서버로 업로드 (Node 전용 방식)
+  // ✅ Vercel 환경에서도 동작하는 base64 → Blob 업로드 방식
   async function uploadToReplicate(base64Data) {
     try {
       const base64Content = base64Data.split(",")[1];
       const buffer = Buffer.from(base64Content, "base64");
+      const blob = new Blob([buffer]);
 
       const formData = new FormData();
-      formData.append("file", buffer, { filename: "upload.png" });
+      formData.append("file", blob, "upload.png");
 
       const response = await fetch("https://api.replicate.com/v1/files", {
         method: "POST",
         headers: {
-          Authorization: `Token ${REPLICATE_API_KEY}`,
-          ...formData.getHeaders()
+          Authorization: `Token ${REPLICATE_API_KEY}`
         },
         body: formData
       });
@@ -49,18 +46,15 @@ export default async function handler(req, res) {
     }
   }
 
-  // 업로드 프로세스 (Replicate URL로 변환)
+  // base64 → URL 변환
   let uploadedUrls = [];
   for (const img of imageUrls) {
     if (img.startsWith("data:image/")) {
       const url = await uploadToReplicate(img);
       if (url) uploadedUrls.push(url);
-    } else {
-      uploadedUrls.push(img);
-    }
+    } else uploadedUrls.push(img);
   }
 
-  // 모델별 입력 데이터 구성
   let inputData = { prompt };
   if (model === "google/imagen-4-fast") {
     inputData = { prompt, aspect_ratio, output_format, safety_filter_level: "block_only_high" };
@@ -98,7 +92,6 @@ export default async function handler(req, res) {
     if (Array.isArray(pred.output)) urls = pred.output;
     else if (typeof pred.output === "string") urls = [pred.output];
 
-    // Nano Banana 출력 지연 처리
     if (model === "google/nano-banana" && urls.length === 0 && pred.id) {
       await new Promise(r => setTimeout(r, 1500));
       const poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
