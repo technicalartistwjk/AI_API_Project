@@ -34,6 +34,7 @@ export default async function handler(req, res) {
     }
 
     const prediction = await response.json();
+    console.log("Replicate raw response:", prediction);
 
     if (prediction.output && prediction.output.length > 0) {
       res.status(200).json({ imageUrl: prediction.output[0] });
