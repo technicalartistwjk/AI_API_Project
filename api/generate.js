@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   if (!prompt)
     return res.status(400).json({ message: "프롬프트가 없습니다." });
 
-  // 모델별 엔드포인트 정의
+  // 모델 엔드포인트
   const MODEL_ENDPOINTS = {
     "google/imagen-4-fast":
       "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
@@ -21,28 +21,33 @@ export default async function handler(req, res) {
     "bytedance/seedream-4":
       "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions",
   };
-
   const endpoint = MODEL_ENDPOINTS[model];
   if (!endpoint)
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-  // ✅ 파일 업로드 함수 (Vercel 호환)
+  // ✅ Vercel 환경 호환: 직접 multipart 바디 구성
   async function uploadToReplicate(base64Data) {
     try {
       const base64Content = base64Data.split(",")[1];
       const buffer = Buffer.from(base64Content, "base64");
 
-      // Blob 대신 File을 사용해야 Node 런타임(Vercel)에서 정상 업로드됨
-      const formData = new FormData();
-      formData.append(
-        "file",
-        new File([buffer], "upload.png", { type: "image/png" })
-      );
+      // multipart/form-data 수동 구성
+      const boundary = "----replicateBoundary" + Math.random().toString(16);
+      const body = Buffer.concat([
+        Buffer.from(`--${boundary}\r\n`),
+        Buffer.from('Content-Disposition: form-data; name="file"; filename="upload.png"\r\n'),
+        Buffer.from("Content-Type: image/png\r\n\r\n"),
+        buffer,
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]);
 
       const response = await fetch("https://api.replicate.com/v1/files", {
         method: "POST",
-        headers: { Authorization: `Token ${REPLICATE_API_KEY}` },
-        body: formData,
+        headers: {
+          Authorization: `Token ${REPLICATE_API_KEY}`,
+          "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        },
+        body,
       });
 
       const json = await response.json();
@@ -57,7 +62,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // base64 이미지 업로드 → URL 변환
+  // base64 → URL 변환
   let uploadedUrls = [];
   for (const img of imageUrls) {
     if (img.startsWith("data:image/")) {
@@ -66,11 +71,10 @@ export default async function handler(req, res) {
     } else uploadedUrls.push(img);
   }
 
-  // 모델별 입력 데이터 구성
+  // 모델별 입력 데이터
   let inputData = { prompt };
 
   if (model === "google/imagen-4-fast") {
-    // 이미지 입력 불가 모델
     inputData = {
       prompt,
       aspect_ratio: aspect_ratio || "4:3",
@@ -80,11 +84,11 @@ export default async function handler(req, res) {
   } else if (model === "google/nano-banana") {
     inputData = {
       prompt,
-      aspect_ratio: "1:1", // 이 모델은 1:1만 지원
+      aspect_ratio: "1:1",
       output_format,
     };
     if (uploadedUrls.length > 0)
-      inputData.image_input = uploadedUrls; // 단순 URL 배열로 전달
+      inputData.image_input = uploadedUrls;
   } else if (model === "bytedance/seedream-4") {
     inputData = {
       size: "2K",
@@ -102,7 +106,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Replicate 호출
     const r = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -115,23 +118,20 @@ export default async function handler(req, res) {
 
     const pred = await r.json();
     if (!r.ok) {
-      console.error("❌ Replicate 응답:", pred);
+      console.error(" Replicate 응답:", pred);
       throw new Error(pred.error || pred.detail || "API 요청 실패");
     }
 
-    // 출력 처리
+    // 결과 정리
     let urls = [];
     if (Array.isArray(pred.output)) urls = pred.output;
     else if (typeof pred.output === "string") urls = [pred.output];
 
-    // Nano Banana: 지연된 응답 대응
     if (model === "google/nano-banana" && urls.length === 0 && pred.id) {
       await new Promise((r) => setTimeout(r, 1500));
       const poll = await fetch(
         `https://api.replicate.com/v1/predictions/${pred.id}`,
-        {
-          headers: { Authorization: `Token ${REPLICATE_API_KEY}` },
-        }
+        { headers: { Authorization: `Token ${REPLICATE_API_KEY}` } }
       );
       const p = await poll.json();
       if (Array.isArray(p.output)) urls = p.output;
@@ -146,6 +146,7 @@ export default async function handler(req, res) {
     res.status(500).json({ message: err.message });
   }
 }
+
 
 /* 생성이미지 기반 변경 가능
 export default async function handler(req, res) {
