@@ -24,19 +24,17 @@ export default async function handler(req, res) {
   if (model === "google/imagen-4-fast") {
     inputData = {
       prompt,
-      aspect_ratio: aspect_ratio || "4:3", // 사용자가 선택한 값
+      aspect_ratio: aspect_ratio || "4:3",
       output_format: "jpg",
       safety_filter_level: "block_only_high"
     };
-  } 
-  else if (model === "google/nano-banana") {
+  } else if (model === "google/nano-banana") {
     inputData = {
       prompt,
-      aspect_ratio: aspect_ratio || "1:1", // 기본값 1:1
+      aspect_ratio: aspect_ratio || "1:1",
       output_format: "jpg"
     };
-  } 
-  else if (model === "bytedance/seedream-4") {
+  } else if (model === "bytedance/seedream-4") {
     inputData = {
       size: "2K",
       width: 2048,
@@ -44,7 +42,7 @@ export default async function handler(req, res) {
       prompt,
       max_images: 1,
       image_input: [],
-      aspect_ratio: aspect_ratio || "4:3", // 선택된 값 반영
+      aspect_ratio: aspect_ratio || "4:3",
       enhance_prompt: true,
       sequential_image_generation: "disabled"
     };
@@ -67,19 +65,40 @@ export default async function handler(req, res) {
     }
 
     const prediction = await response.json();
-    console.log("🧩 Model response:", prediction);
+    console.log(" Model response:", prediction);
 
-    const imageUrl = prediction.output?.[0] || prediction.output || null;
+    // output이 문자열이거나 배열일 수 있으므로 둘 다 처리
+    let imageUrl = null;
+    if (Array.isArray(prediction.output)) {
+      imageUrl = prediction.output[0];
+    } else if (typeof prediction.output === "string") {
+      imageUrl = prediction.output;
+    }
+
+    // Nano Banana 특수 케이스: output이 null인데 id가 있으면 1.5초 후 재조회
+    if (model === "google/nano-banana" && !imageUrl && prediction.id) {
+      console.log(" Nano Banana returned empty output — polling once more...");
+      await new Promise(r => setTimeout(r, 1500));
+      const pollRes = await fetch(
+        `https://api.replicate.com/v1/predictions/${prediction.id}`,
+        { headers: { Authorization: `Token ${REPLICATE_API_KEY}` } }
+      );
+      const polled = await pollRes.json();
+      if (Array.isArray(polled.output)) imageUrl = polled.output[0];
+      else if (typeof polled.output === "string") imageUrl = polled.output;
+    }
 
     if (!imageUrl) {
-      throw new Error("이미지 출력이 없습니다.");
+      throw new Error("이미지 출력이 없습니다. (출력 형식 불명 또는 지연)");
     }
 
     res.status(200).json({ imageUrl });
 
   } catch (error) {
     console.error("서버 내부 오류:", error);
-    res.status(500).json({ message: error.message || "서버 내부 오류가 발생했습니다." });
+    res.status(500).json({
+      message: error.message || "서버 내부 오류가 발생했습니다."
+    });
   }
 }
 
