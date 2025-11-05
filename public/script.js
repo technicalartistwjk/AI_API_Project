@@ -3,6 +3,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const generateButton = document.getElementById('generate-button');
   const resultImage = document.getElementById('result-image');
   const modelSelect = document.getElementById('model-select');
+  const modelInfo = document.getElementById('model-info'); // 
+
+    const MODEL_INFO = {
+    "google/imagen-4-fast": "Google Imagen 4 Fast — 약 $0.02(한화 28.9원) / 빠른 속도, 보통 화질",
+    "google/nano-banana": "Google Nano Banana — 약 $0.039(한화 56.36원) / 고품질, 이미지 편집 지원 (Gemini 2.5)",
+    "bytedance/seedream-4": "Bytedance Seedream 4 — 약 $0.03(한화 43.35원) / 4K 고화질 이미지 생성"
+  };
+  
+  modelSelect.addEventListener('change', () => {
+    const selectedModel = modelSelect.value;
+    modelInfo.textContent = MODEL_INFO[selectedModel] || "모델 정보를 불러오는 중...";
+  });
 
   generateButton.addEventListener('click', handleImageGeneration);
 
