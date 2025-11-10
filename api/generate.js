@@ -21,31 +21,55 @@ export default async function handler(req, res) {
   if (!prompt) return res.status(400).json({ message: "⚠️ 프롬프트가 비어 있습니다." });
 
   // ✅ 파일 업로드 직접 처리 함수
-  async function uploadBase64ToReplicate(base64Data) {
-    try {
-      console.log("📤 Replicate 업로드 시작...");
-      const base64Content = base64Data.split(",")[1];
-      const buffer = Buffer.from(base64Content, "base64");
-      const formData = new FormData();
-      formData.append("file", buffer, { filename: "upload.png" });
+    async function uploadBase64ToReplicate(base64Data) {
+      try {
+        console.log("📤 Replicate 업로드 시작...");
 
-      const response = await fetch("https://api.replicate.com/v1/files", {
-        method: "POST",
-        headers: {
-          Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
-        },
-        body: formData,
-      });
+        // MIME 타입 추출 (data:image/jpeg;base64,... → image/jpeg)
+        const mimeMatch = base64Data.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
 
-      const json = await response.json();
-      if (!response.ok) throw new Error(json.detail || JSON.stringify(json));
-      console.log("📦 Replicate 업로드 응답:", json);
-      return json.url;
-    } catch (err) {
-      console.error("🚫 업로드 실패:", err);
-      return null;
+        // 확장자 추출 (image/jpeg → .jpg 등)
+        const ext = mimeType.split("/")[1] || "png";
+        const base64Content = base64Data.split(",")[1];
+        const buffer = Buffer.from(base64Content, "base64");
+
+        // ✅ Replicate API는 file_name / content_type을 명시해야 함
+        const createRes = await fetch("https://api.replicate.com/v1/files", {
+          method: "POST",
+          headers: {
+            Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            file_name: `upload.${ext}`,
+            content_type: mimeType,
+          }),
+        });
+
+        const createData = await createRes.json();
+        if (!createRes.ok || !createData.upload_url)
+          throw new Error(createData.detail || "Upload URL 생성 실패");
+
+        // ✅ 서명된 URL로 PUT 업로드
+        const putRes = await fetch(createData.upload_url, {
+          method: "PUT",
+          headers: {
+            "Content-Type": mimeType,
+          },
+          body: buffer,
+        });
+
+        if (!putRes.ok) throw new Error("파일 업로드 실패");
+
+        console.log("📦 Replicate 업로드 성공:", createData.serving_url);
+        return createData.serving_url;
+      } catch (err) {
+        console.error("🚫 업로드 실패:", err);
+        return null;
+      }
     }
-  }
+
 
   // 모델 endpoint
   const MODEL_ENDPOINTS = {
