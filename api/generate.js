@@ -1,4 +1,5 @@
 import Replicate from "replicate";
+import FormData from "form-data";
 
 export default async function handler(req, res) {
   const replicate = new Replicate({
@@ -19,7 +20,34 @@ export default async function handler(req, res) {
 
   if (!prompt) return res.status(400).json({ message: "⚠️ 프롬프트가 비어 있습니다." });
 
-  // 모델 엔드포인트 정의
+  // ✅ 파일 업로드 직접 처리 함수
+  async function uploadBase64ToReplicate(base64Data) {
+    try {
+      console.log("📤 Replicate 업로드 시작...");
+      const base64Content = base64Data.split(",")[1];
+      const buffer = Buffer.from(base64Content, "base64");
+      const formData = new FormData();
+      formData.append("file", buffer, { filename: "upload.png" });
+
+      const response = await fetch("https://api.replicate.com/v1/files", {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${process.env.REPLICATE_API_KEY}`,
+        },
+        body: formData,
+      });
+
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.detail || JSON.stringify(json));
+      console.log("📦 Replicate 업로드 응답:", json);
+      return json.url;
+    } catch (err) {
+      console.error("🚫 업로드 실패:", err);
+      return null;
+    }
+  }
+
+  // 모델 endpoint
   const MODEL_ENDPOINTS = {
     "google/imagen-4-fast": "google/imagen-4-fast",
     "google/nano-banana": "google/nano-banana",
@@ -29,19 +57,12 @@ export default async function handler(req, res) {
   const selectedModel = MODEL_ENDPOINTS[model];
   if (!selectedModel) return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-  // 이미지 입력 준비
+  // 🧩 이미지 입력 준비
   let finalImageInputs = [];
-
   for (const img of imageUrls) {
     if (img.startsWith("data:image/")) {
-      console.log("🧩 base64 이미지 감지 → Replicate SDK 자동 업로드 예정");
-      try {
-        const uploaded = await replicate.files.upload(img);
-        console.log("📤 업로드 완료:", uploaded);
-        finalImageInputs.push(uploaded);
-      } catch (err) {
-        console.error("🚫 업로드 실패:", err);
-      }
+      const uploadedUrl = await uploadBase64ToReplicate(img);
+      if (uploadedUrl) finalImageInputs.push(uploadedUrl);
     } else {
       finalImageInputs.push(img);
     }
@@ -49,7 +70,7 @@ export default async function handler(req, res) {
 
   console.log("🖼️ 최종 image_input 배열:", finalImageInputs);
 
-  // 모델별 입력 구성
+  // 모델별 input 구성
   let inputData = { prompt };
 
   if (model === "google/imagen-4-fast") {
