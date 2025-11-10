@@ -41,17 +41,14 @@ async function uploadFileAndGetUrl(file) {
     method: "POST",
     headers: {
       "x-file-name": file.name,
-      "x-content-type": file.type,
-      // 절대 'Content-Type' 직접 지정하지 마! (브라우저가 자동으로 적절히 처리)
+      "x-content-type": file.type
     },
-    body: file, // ✅ Blob 그대로 보냄
+    body: file
   });
-
   const data = await res.json();
-  if (!res.ok) throw new Error(data?.message || "파일 업로드 실패");
-  return data.url; // https://replicate.delivery/pb/xxx/yyy.jpg
+  if (!res.ok) throw new Error(data.message || "업로드 실패");
+  return data.url;
 }
-
   // ===== 이미지 생성 =====
   async function handleGenerate() {
     const prompt = promptInput.value.trim();
