@@ -1,4 +1,7 @@
+// /public/script.js
+
 document.addEventListener("DOMContentLoaded", () => {
+  // ===== DOM refs =====
   const modelSelect = document.getElementById("model-select");
   const ratioSelect = document.getElementById("ratio-select");
   const promptInput = document.getElementById("prompt-input");
@@ -9,50 +12,83 @@ document.addEventListener("DOMContentLoaded", () => {
   const formatSelect = document.getElementById("format-select");
   const imageCount = document.getElementById("image-count");
 
+  // ===== local state =====
   let generatedImages = [];
 
+  // ===== model info (옵션) =====
+  const MODEL_RATIOS = {
+    "google/imagen-4-fast": ["1:1", "4:3", "3:2", "16:9"],
+    "google/nano-banana": ["1:1", "4:3", "3:4", "16:9", "9:16"],
+    "bytedance/seedream-4": ["1:1", "4:3", "3:4", "16:9"],
+  };
+
+  // 초기 비율 세팅
+  function refreshRatios() {
+    const model = modelSelect.value;
+    const ratios = MODEL_RATIOS[model] || ["1:1"];
+    ratioSelect.innerHTML = "";
+    ratios.forEach((r) => {
+      const opt = document.createElement("option");
+      opt.value = r;
+      opt.textContent = r;
+      ratioSelect.appendChild(opt);
+    });
+  }
+  modelSelect.addEventListener("change", refreshRatios);
+  refreshRatios();
+
+  // ===== helper: 업로드 → Replicate 스토리지 URL 반환 =====
   async function uploadFileAndGetUrl(file) {
-    console.log("📤 Uploading file:", file.name);
+    // 서버에서 멀티파트로 Replicate에 업로드하고, public URL을 돌려줌
     const res = await fetch("/api/upload", {
       method: "POST",
       headers: {
         "x-file-name": file.name,
         "x-content-type": file.type,
       },
-      body: file,
+      body: file, // 그대로 전송 (서버에서 form-data 구성)
     });
-    if (!res.ok) throw new Error("파일 업로드 실패");
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`파일 업로드 실패 (${res.status}) ${text}`);
+    }
     const data = await res.json();
-    console.log("✅ Uploaded URL:", data.url);
+    if (!data?.url) throw new Error("업로드 URL을 받지 못했습니다.");
     return data.url;
   }
 
+  // ===== Generate =====
   async function handleGenerate() {
     const prompt = promptInput.value.trim();
     const model = modelSelect.value;
     const aspect_ratio = ratioSelect.value;
     const output_format = formatSelect.value;
-    const count = parseInt(imageCount.value);
-    if (!prompt) return alert("프롬프트를 입력해주세요!");
+    const count = parseInt(imageCount.value || "1", 10);
+
+    if (!prompt) {
+      alert("프롬프트를 입력해주세요!");
+      return;
+    }
 
     generateButton.disabled = true;
-    generateButton.textContent = "이미지 생성 중...";
+    downloadButton.disabled = true;
     resultContainer.innerHTML = "";
     generatedImages = [];
 
     try {
-      // 1️⃣ 파일 업로드
+      // 1) 업로드
+      const files = Array.from(imageUpload.files || []);
       const uploadedUrls = [];
-      const files = Array.from(imageUpload.files);
+
       for (let i = 0; i < files.length; i++) {
-        generateButton.textContent = `업로드 중 (${i + 1}/${files.length})...`;
+        generateButton.textContent = `이미지 업로드 중 (${i + 1}/${files.length})...`;
         const url = await uploadFileAndGetUrl(files[i]);
         uploadedUrls.push(url);
       }
 
-      // 2️⃣ Replicate 호출
+      // 2) Replicate 호출
       generateButton.textContent = "모델 실행 중...";
-      const res = await fetch("/api/generate", {
+      const resp = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -61,22 +97,26 @@ document.addEventListener("DOMContentLoaded", () => {
           aspect_ratio,
           output_format,
           imageCount: count,
-          imageUrls: uploadedUrls,
+          imageUrls: uploadedUrls, // 업로드한 URL 배열
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "API 오류");
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data?.message || `모델 호출 실패 (${resp.status})`);
+      }
 
-      const urls = data.imageUrls || [];
-      if (urls.length === 0) throw new Error("결과 이미지가 없습니다.");
+      const urls = data?.imageUrls || [];
+      if (!urls.length) throw new Error("결과 이미지가 없습니다.");
 
-      // 3️⃣ 결과 표시
+      // 3) 표시
       resultContainer.innerHTML = "";
-      urls.forEach((url) => {
+      urls.forEach((u) => {
         const img = document.createElement("img");
-        img.src = url;
+        img.src = u;
         img.width = 512;
+        img.style.marginRight = "8px";
+        img.style.marginBottom = "8px";
         resultContainer.appendChild(img);
       });
 
@@ -84,41 +124,48 @@ document.addEventListener("DOMContentLoaded", () => {
       downloadButton.disabled = false;
       generateButton.textContent = "✅ 완료";
     } catch (err) {
-      console.error("❌ handleGenerate error:", err);
-      alert("오류: " + err.message);
-      resultContainer.innerHTML = `<p style="color:red;">오류: ${err.message}</p>`;
+      console.error(err);
+      alert(err.message || "알 수 없는 오류가 발생했습니다.");
+      resultContainer.innerHTML = `<p style="color:red;">오류: ${err.message || "Unknown error"}</p>`;
     } finally {
       generateButton.disabled = false;
-      generateButton.textContent = "이미지 생성하기";
+      if (generateButton.textContent !== "✅ 완료") {
+        generateButton.textContent = "이미지 생성하기";
+      }
     }
   }
 
+  // ===== Download =====
   async function handleDownload() {
-    if (generatedImages.length === 0) return;
+    if (!generatedImages.length) return;
+
+    // 단일 이미지면 바로 저장
     if (generatedImages.length === 1) {
       const a = document.createElement("a");
       a.href = generatedImages[0];
       a.download = "generated_image.jpg";
       a.click();
-    } else {
-      const zip = new JSZip();
-      let i = 1;
-      for (const url of generatedImages) {
-        const blob = await fetch(url).then((r) => r.blob());
-        zip.file(`image_${i++}.jpg`, blob);
-      }
-      const content = await zip.generateAsync({ type: "blob" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(content);
-      a.download = "generated_images.zip";
-      a.click();
+      return;
     }
+
+    // 여러 장이면 ZIP
+    const zip = new JSZip();
+    let i = 1;
+    for (const url of generatedImages) {
+      const blob = await fetch(url).then((r) => r.blob());
+      zip.file(`image_${i++}.jpg`, blob);
+    }
+    const content = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(content);
+    a.download = "generated_images.zip";
+    a.click();
   }
 
+  // ===== bind =====
   generateButton.addEventListener("click", handleGenerate);
   downloadButton.addEventListener("click", handleDownload);
 });
-
 
 /*생성이미지 기반 변경 가능*/
 /*
