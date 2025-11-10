@@ -1,4 +1,4 @@
-import https from "https";
+import FormData from "form-data";
 
 export const config = { runtime: "nodejs" };
 
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   console.log("===== 🟢 /api/generate 호출 시작 =====");
   console.log("🧾 요청 데이터:", { prompt, model, imageUrlsCount: imageUrls?.length });
 
-  // --- 1️⃣ base64 → Replicate 업로드 (디버그 로그용)
+  // ✅ 최신 Replicate 방식: multipart/form-data 업로드
   async function uploadBase64ToReplicate(base64Data) {
     try {
       console.log("📤 업로드 시작...");
@@ -23,66 +23,34 @@ export default async function handler(req, res) {
 
       if (buffer.length === 0) throw new Error("⚠️ base64 변환 후 버퍼가 비어 있음");
 
-      const payload = JSON.stringify({
-        file_name: `upload.${ext}`,
-        content_type: mimeType,
-      });
-      console.log("📦 presign payload:", payload);
-
-      const createData = await new Promise((resolve, reject) => {
-        const options = {
-          hostname: "api.replicate.com",
-          port: 443,
-          path: "/v1/files",
-          method: "POST",
-          headers: {
-            Authorization: `Token ${REPLICATE_API_KEY}`,
-            "Content-Type": "application/json",
-            "Content-Length": Buffer.byteLength(payload),
-          },
-        };
-
-        const req = https.request(options, (resp) => {
-          let data = "";
-          resp.on("data", (chunk) => (data += chunk));
-          resp.on("end", () => {
-            console.log("📨 presign raw:", data);
-            try {
-              const json = JSON.parse(data);
-              if (resp.statusCode >= 400)
-                reject(new Error(json.detail || json.error || "presign 실패"));
-              else resolve(json);
-            } catch (e) {
-              reject(e);
-            }
-          });
-        });
-
-        req.on("error", reject);
-        req.write(payload);
-        req.end();
+      const formData = new FormData();
+      formData.append("file", buffer, {
+        filename: `upload.${ext}`,
+        contentType: mimeType,
       });
 
-      console.log("✅ presign OK:", createData);
-
-      const putRes = await fetch(createData.upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": mimeType },
-        body: buffer,
+      const uploadRes = await fetch("https://api.replicate.com/v1/files", {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${REPLICATE_API_KEY}`,
+          ...formData.getHeaders(),
+        },
+        body: formData,
       });
 
-      console.log("📤 S3 PUT 상태:", putRes.status);
-      if (!putRes.ok) throw new Error(`S3 업로드 실패 (${putRes.status})`);
+      const uploadJson = await uploadRes.json();
+      console.log("📦 Replicate 업로드 응답:", uploadJson);
 
-      console.log("✅ 업로드 완료:", createData.serving_url);
-      return createData.serving_url;
+      if (!uploadRes.ok) throw new Error(uploadJson.detail || "Upload failed");
+      console.log("✅ 업로드 완료:", uploadJson.serving_url);
+      return uploadJson.serving_url;
     } catch (err) {
       console.error("🚫 업로드 실패:", err);
       return null;
     }
   }
 
-  // --- 2️⃣ Base64 업로드 테스트
+  // base64 처리
   let uploadedUrls = [];
   for (const img of imageUrls) {
     if (img.startsWith("data:image/")) {
@@ -93,13 +61,13 @@ export default async function handler(req, res) {
 
   console.log("🖼️ 최종 image_input:", uploadedUrls);
 
-  // --- 3️⃣ 모델 요청 구성
+  // 모델 요청
   const endpoint = "https://api.replicate.com/v1/models/google/nano-banana/predictions";
   const inputData = { prompt, aspect_ratio, output_format };
   if (uploadedUrls.length > 0) inputData.image_input = uploadedUrls;
+
   console.log("🧠 최종 inputData:", inputData);
 
-  // --- 4️⃣ Replicate 모델 요청
   const r = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -109,9 +77,10 @@ export default async function handler(req, res) {
     },
     body: JSON.stringify({ input: inputData }),
   });
-  const pred = await r.json();
 
+  const pred = await r.json();
   console.log("🔍 모델 응답:", pred);
+
   const urls = Array.isArray(pred.output) ? pred.output : [pred.output].filter(Boolean);
   res.status(200).json({ imageUrls: urls });
 }
