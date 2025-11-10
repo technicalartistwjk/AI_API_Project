@@ -1,167 +1,117 @@
 // /public/script.js
 document.addEventListener("DOMContentLoaded", () => {
-  // ===== DOM Elements =====
   const modelSelect = document.getElementById("model-select");
   const ratioSelect = document.getElementById("ratio-select");
   const promptInput = document.getElementById("prompt-input");
   const generateButton = document.getElementById("generate-button");
   const resultContainer = document.getElementById("result-container");
-  const downloadButton = document.getElementById("download-button");
   const imageUpload = document.getElementById("image-upload");
   const formatSelect = document.getElementById("format-select");
   const imageCount = document.getElementById("image-count");
+  const downloadButton = document.getElementById("download-button");
 
   let generatedImages = [];
 
-  // ===== 모델별 비율 =====
-  const MODEL_RATIOS = {
-    "google/imagen-4-fast": ["1:1", "4:3", "3:2", "16:9"],
-    "google/nano-banana": ["1:1", "4:3", "3:4", "16:9", "9:16"],
-    "bytedance/seedream-4": ["1:1", "4:3", "3:4", "16:9"],
-  };
-
-  // ===== 비율 선택 갱신 =====
-  function updateRatios() {
-    const model = modelSelect.value;
-    ratioSelect.innerHTML = "";
-    (MODEL_RATIOS[model] || ["1:1"]).forEach((ratio) => {
-      const opt = document.createElement("option");
-      opt.value = ratio;
-      opt.textContent = ratio;
-      ratioSelect.appendChild(opt);
+  async function uploadFileAndGetUrl(file) {
+    const uploadInit = await fetch("/api/request_upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        file_name: file.name,
+        content_type: file.type,
+      }),
     });
+
+    const data = await uploadInit.json();
+    if (!uploadInit.ok) throw new Error(data.message || "Upload init failed");
+
+    const { upload_url, serving_url } = data;
+
+    const uploadRes = await fetch(upload_url, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (!uploadRes.ok) throw new Error("파일 업로드 실패");
+
+    return serving_url;
   }
 
-  modelSelect.addEventListener("change", updateRatios);
-  updateRatios();
-  
-// /public/script.js 중 업로드 함수
-async function uploadFileAndGetUrl(file) {
-  const res = await fetch("/api/upload", {
-    method: "POST",
-    headers: {
-      "x-file-name": file.name,
-      "x-content-type": file.type
-    },
-    body: file
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "업로드 실패");
-  return data.url;
-}
-  // ===== 이미지 생성 =====
   async function handleGenerate() {
     const prompt = promptInput.value.trim();
-    const model = modelSelect.value;
-    const aspect_ratio = ratioSelect.value;
-    const output_format = formatSelect.value;
-    const count = parseInt(imageCount.value || "1", 10);
-
     if (!prompt) {
-      alert("프롬프트를 입력해주세요!");
+      alert("프롬프트를 입력하세요!");
       return;
     }
 
     generateButton.disabled = true;
-    generateButton.textContent = "⏳ 업로드 준비 중...";
+    generateButton.textContent = "⏳ 생성 중...";
     resultContainer.innerHTML = "";
-    generatedImages = [];
-    downloadButton.disabled = true;
 
     try {
-      // ---- 1. 이미지 업로드 ----
-      const files = Array.from(imageUpload.files || []);
+      const files = Array.from(imageUpload.files);
       const uploadedUrls = [];
 
-      if (files.length > 0) {
-        for (let i = 0; i < files.length; i++) {
-          generateButton.textContent = `📤 업로드 중 (${i + 1}/${files.length})...`;
-          const url = await uploadFileAndGetUrl(files[i]);
-          uploadedUrls.push(url);
-        }
+      for (const file of files) {
+        const url = await uploadFileAndGetUrl(file);
+        uploadedUrls.push(url);
       }
 
-      // ---- 2. 모델 실행 요청 ----
-      generateButton.textContent = "🧠 모델 실행 중...";
-
-      const res = await fetch("/api/generate", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          model,
-          aspect_ratio,
-          output_format,
-          imageCount: count,
+          model: modelSelect.value,
+          aspect_ratio: ratioSelect.value,
+          output_format: formatSelect.value,
           imageUrls: uploadedUrls,
+          imageCount: parseInt(imageCount.value),
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.message || `모델 호출 실패 (${res.status})`);
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "API 오류");
 
-      const urls = data.imageUrls || [];
-      if (!urls.length) throw new Error("출력 이미지가 없습니다.");
-
-      // ---- 3. 결과 출력 ----
-      resultContainer.innerHTML = "";
-      urls.forEach((url) => {
+      generatedImages = data.imageUrls;
+      data.imageUrls.forEach((url) => {
         const img = document.createElement("img");
         img.src = url;
         img.width = 512;
-        img.style.margin = "5px";
-        img.style.borderRadius = "10px";
-        img.style.boxShadow = "0 0 10px rgba(0,0,0,0.2)";
         resultContainer.appendChild(img);
       });
-
-      generatedImages = urls;
       downloadButton.disabled = false;
-      generateButton.textContent = "✅ 완료";
     } catch (err) {
       console.error("❌ 오류:", err);
-      alert(err.message || "알 수 없는 오류가 발생했습니다.");
-      resultContainer.innerHTML = `<p style="color:red;">오류: ${err.message}</p>`;
-      generateButton.textContent = "❌ 오류 발생";
+      alert(`오류: ${err.message}`);
     } finally {
-      setTimeout(() => {
-        generateButton.disabled = false;
-        generateButton.textContent = "이미지 생성하기";
-      }, 2000);
+      generateButton.disabled = false;
+      generateButton.textContent = "이미지 생성하기";
     }
   }
 
-  // ===== 결과 이미지 다운로드 =====
   async function handleDownload() {
     if (generatedImages.length === 0) return;
-
-    // 단일 이미지
     if (generatedImages.length === 1) {
-      const a = document.createElement("a");
-      a.href = generatedImages[0];
-      a.download = "generated_image.jpg";
-      a.click();
-      return;
+      const link = document.createElement("a");
+      link.href = generatedImages[0];
+      link.download = "generated_image.jpg";
+      link.click();
+    } else {
+      const zip = new JSZip();
+      let i = 1;
+      for (const url of generatedImages) {
+        const blob = await fetch(url).then((r) => r.blob());
+        zip.file(`image_${i++}.jpg`, blob);
+      }
+      const content = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(content);
+      link.download = "generated_images.zip";
+      link.click();
     }
-
-    // 여러 장이면 ZIP
-    const zip = new JSZip();
-    let index = 1;
-    for (const url of generatedImages) {
-      const blob = await fetch(url).then((r) => r.blob());
-      zip.file(`image_${index++}.jpg`, blob);
-    }
-
-    const content = await zip.generateAsync({ type: "blob" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(content);
-    a.download = "generated_images.zip";
-    a.click();
   }
 
-  // ===== 이벤트 바인딩 =====
   generateButton.addEventListener("click", handleGenerate);
   downloadButton.addEventListener("click", handleDownload);
 });

@@ -6,14 +6,15 @@ export default async function handler(req, res) {
     const {
       prompt,
       model,
-      aspect_ratio,
+      aspect_ratio = "1:1",
       output_format = "jpg",
       imageUrls = [],
       imageCount = 1,
     } = req.body;
 
-    if (!prompt)
+    if (!prompt) {
       return res.status(400).json({ message: "프롬프트가 없습니다." });
+    }
 
     const MODEL_ENDPOINTS = {
       "google/imagen-4-fast":
@@ -23,36 +24,41 @@ export default async function handler(req, res) {
       "bytedance/seedream-4":
         "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions",
     };
-    const endpoint = MODEL_ENDPOINTS[model];
-    if (!endpoint)
-      return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-    const inputData = { prompt, aspect_ratio, output_format };
-    if (imageUrls.length > 0) {
-      inputData.image = imageUrls;
-      inputData.image_input = imageUrls;
+    const endpoint = MODEL_ENDPOINTS[model];
+    if (!endpoint) {
+      return res.status(400).json({ message: "유효하지 않은 모델입니다." });
     }
 
-    const r = await fetch(endpoint, {
+    const inputData = { prompt, aspect_ratio, output_format };
+    if (imageUrls.length > 0) inputData.image_input = imageUrls;
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${REPLICATE_API_KEY}`,
+        Authorization: `Token ${REPLICATE_API_KEY}`,
         "Content-Type": "application/json",
+        Prefer: "wait",
       },
       body: JSON.stringify({ input: inputData }),
     });
 
-    const pred = await r.json();
-    if (!r.ok) throw new Error(pred.error || pred.detail || "Replicate API 오류");
+    const data = await response.json();
+    if (!response.ok) {
+      console.error("❌ Replicate 오류:", data);
+      throw new Error(data.error || data.detail || "API 오류");
+    }
 
     let urls = [];
-    if (Array.isArray(pred.output)) urls = pred.output;
-    else if (typeof pred.output === "string") urls = [pred.output];
+    if (Array.isArray(data.output)) urls = data.output;
+    else if (typeof data.output === "string") urls = [data.output];
 
-    return res.status(200).json({ imageUrls: urls });
+    if (!urls.length) throw new Error("출력 이미지가 없습니다.");
+
+    res.status(200).json({ imageUrls: urls });
   } catch (err) {
     console.error("🔥 generate.js Error:", err);
-    return res.status(500).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 }
 
