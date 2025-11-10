@@ -6,16 +6,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { file_name, content_type } = await req.json
-      ? await req.json()
-      : req.body;
+    const body = req.body || (await req.json?.());
+    const { file_name, content_type } = body || {};
 
     if (!file_name || !content_type) {
       return res.status(400).json({ message: 'file_name and content_type are required' });
     }
 
-    // 1️ Replicate 업로드 URL 요청
-    const response = await fetch("https://api.replicate.com/v1/uploads", {
+    //  최신 Replicate 업로드 엔드포인트 (uploads → files)
+    const response = await fetch("https://api.replicate.com/v1/files", {
       method: "POST",
       headers: {
         "Authorization": `Token ${process.env.REPLICATE_API_KEY}`,
@@ -28,27 +27,24 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      console.error("Replicate upload request failed:", err);
-      return res.status(500).json({ detail: err.detail || 'Failed to get upload URL' });
+      const error = await response.json();
+      console.error("Replicate upload request failed:", error);
+      return res.status(500).json({ detail: error.detail || 'Failed to get upload URL' });
     }
 
-    // 2️ 응답 파싱
     const uploadData = await response.json();
-    const servingUrl =
-      uploadData.serving_url ||
-      uploadData.url ||
-      uploadData.output_url ||
-      null;
 
-    if (!uploadData.upload_url || !servingUrl) {
+    // ✅ 새로운 구조: upload_url → upload_url, url → serving_url
+    const uploadUrl = uploadData.upload_url;
+    const servingUrl = uploadData.url || uploadData.serving_url || uploadData.output_url;
+
+    if (!uploadUrl || !servingUrl) {
       console.error("Invalid Replicate upload response:", uploadData);
       return res.status(500).json({ message: "Invalid upload URL structure" });
     }
 
-    // 3️ 클라이언트로 전달
     return res.status(200).json({
-      upload_url: uploadData.upload_url,
+      upload_url: uploadUrl,
       serving_url: servingUrl,
     });
   } catch (err) {
