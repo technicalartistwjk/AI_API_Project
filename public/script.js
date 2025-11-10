@@ -6,79 +6,51 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultContainer = document.getElementById('result-container');
   const downloadButton = document.getElementById('download-button');
   const imageUpload = document.getElementById('image-upload');
-  const addToInputToggle = document.getElementById('add-to-input-toggle');
   const formatSelect = document.getElementById('format-select');
   const imageCount = document.getElementById('image-count');
 
   let generatedImages = [];
-  let autoAddedImage = null;
 
-  // [업로드 헬퍼]
   async function uploadFileAndGetUrl(file) {
-    console.log("📤 업로드 요청:", file.name);
-
-    const uploadRequestRes = await fetch('/api/request_upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        file_name: file.name,
-        content_type: file.type,
-      }),
-    });
-
-    if (!uploadRequestRes.ok) {
-      throw new Error(`업로드 URL 요청 실패: ${file.name}`);
-    }
-
-    const { upload_url, serving_url } = await uploadRequestRes.json();
-    if (!upload_url || !serving_url)
-      throw new Error("upload_url/serving_url 누락됨");
-
-    console.log("⬆️ 파일 업로드 중:", serving_url);
-    const uploadRes = await fetch(upload_url, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type },
+    console.log("📤 Uploading file:", file.name);
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: {
+        "x-file-name": file.name,
+      },
       body: file,
     });
-    if (!uploadRes.ok) throw new Error(`파일 업로드 실패: ${file.name}`);
-    return serving_url;
+    if (!res.ok) throw new Error("파일 업로드 실패");
+    const data = await res.json();
+    console.log("✅ Uploaded URL:", data.url);
+    return data.url;
   }
 
-  // [이미지 생성]
   async function handleGenerate() {
     const prompt = promptInput.value.trim();
     const model = modelSelect.value;
     const aspect_ratio = ratioSelect.value;
     const output_format = formatSelect.value;
     const count = parseInt(imageCount.value);
-    if (!prompt) {
-      alert("프롬프트를 입력해주세요!");
-      return;
-    }
+    if (!prompt) return alert("프롬프트를 입력해주세요!");
 
-    resultContainer.innerHTML = "";
-    downloadButton.disabled = true;
     generateButton.disabled = true;
-    generateButton.textContent = "🚀 업로드 중...";
+    generateButton.textContent = "생성 중...";
+    resultContainer.innerHTML = "";
+    generatedImages = [];
 
     try {
-      const imageUrls = [];
-
-      // 이전 결과 이미지 추가
-      if (addToInputToggle.checked && autoAddedImage) {
-        imageUrls.push(autoAddedImage);
-      }
-
-      // 새 이미지 업로드
+      // 1️⃣ 파일 업로드
+      const uploadedUrls = [];
       const files = Array.from(imageUpload.files);
       for (let i = 0; i < files.length; i++) {
+        generateButton.textContent = `이미지 업로드 중 (${i + 1}/${files.length})...`;
         const url = await uploadFileAndGetUrl(files[i]);
-        imageUrls.push(url);
-        generateButton.textContent = `업로드 중 (${i + 1}/${files.length})...`;
+        uploadedUrls.push(url);
       }
 
-      // 모델 실행
-      generateButton.textContent = "🤖 Replicate 모델 실행 중...";
+      // 2️⃣ Replicate 호출
+      generateButton.textContent = "Replicate 호출 중...";
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,17 +60,17 @@ document.addEventListener('DOMContentLoaded', () => {
           aspect_ratio,
           output_format,
           imageCount: count,
-          imageUrls,
+          imageUrls: uploadedUrls,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "API 오류");
 
-      // 결과 표시
-      const urls = data.imageUrls || [data.imageUrl];
-      generatedImages = urls;
-      autoAddedImage = urls[0];
+      const urls = data.imageUrls || [];
+      if (urls.length === 0) throw new Error("결과 이미지가 없습니다.");
+
+      // 3️⃣ 결과 표시
       resultContainer.innerHTML = "";
       urls.forEach((url) => {
         const img = document.createElement("img");
@@ -107,12 +79,13 @@ document.addEventListener('DOMContentLoaded', () => {
         resultContainer.appendChild(img);
       });
 
+      generatedImages = urls;
       downloadButton.disabled = false;
       generateButton.textContent = "✅ 완료";
     } catch (err) {
-      console.error("❌ handleGenerate Error:", err);
+      console.error("❌ handleGenerate error:", err);
+      alert("오류: " + err.message);
       resultContainer.innerHTML = `<p style="color:red;">오류: ${err.message}</p>`;
-      alert(err.message);
     } finally {
       generateButton.disabled = false;
       generateButton.textContent = "이미지 생성하기";
@@ -122,10 +95,10 @@ document.addEventListener('DOMContentLoaded', () => {
   async function handleDownload() {
     if (generatedImages.length === 0) return;
     if (generatedImages.length === 1) {
-      const link = document.createElement("a");
-      link.href = generatedImages[0];
-      link.download = "generated_image.jpg";
-      link.click();
+      const a = document.createElement("a");
+      a.href = generatedImages[0];
+      a.download = "generated_image.jpg";
+      a.click();
     } else {
       const zip = new JSZip();
       let i = 1;
@@ -133,9 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const blob = await fetch(url).then(r => r.blob());
         zip.file(`image_${i++}.jpg`, blob);
       }
-      const blob = await zip.generateAsync({ type: "blob" });
+      const content = await zip.generateAsync({ type: "blob" });
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
+      a.href = URL.createObjectURL(content);
       a.download = "generated_images.zip";
       a.click();
     }

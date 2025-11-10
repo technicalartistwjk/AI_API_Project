@@ -1,10 +1,9 @@
 // /api/generate.js
-
 export default async function handler(req, res) {
   const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
 
   try {
-    const { prompt, model, aspect_ratio, output_format = "jpg", imageCount = 1, imageUrls = [] } = req.body;
+    const { prompt, model, aspect_ratio, output_format = "jpg", imageUrls = [], imageCount = 1 } = req.body;
 
     if (!prompt) return res.status(400).json({ message: "프롬프트가 없습니다." });
 
@@ -13,37 +12,16 @@ export default async function handler(req, res) {
       "google/nano-banana": "https://api.replicate.com/v1/models/google/nano-banana/predictions",
       "bytedance/seedream-4": "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions",
     };
-
     const endpoint = MODEL_ENDPOINTS[model];
     if (!endpoint) return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-    // 입력 데이터 구성
-    const inputData = { prompt };
-    if (aspect_ratio) inputData.aspect_ratio = aspect_ratio;
-    if (output_format) inputData.output_format = output_format;
+    const inputData = { prompt, aspect_ratio, output_format };
 
-    if (model === "google/imagen-4-fast") {
-      inputData.safety_filter_level = "block_only_high";
-    } else if (model === "google/nano-banana") {
-      inputData.aspect_ratio = "1:1";
-      if (imageUrls.length > 0) {
-        inputData.image = imageUrls;
-        inputData.image_input = imageUrls; // 호환성 fallback
-      }
-    } else if (model === "bytedance/seedream-4") {
-      inputData.size = "2K";
-      inputData.width = 2048;
-      inputData.height = 2048;
-      inputData.max_images = imageCount;
-      inputData.enhance_prompt = true;
-      inputData.sequential_image_generation = "disabled";
-      if (imageUrls.length > 0) {
-        inputData.image = imageUrls;
-        inputData.image_input = imageUrls;
-      }
+    if (imageUrls.length > 0) {
+      inputData.image = imageUrls;
+      inputData.image_input = imageUrls;
     }
 
-    // 1️⃣ Replicate 모델 호출
     const r = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -54,33 +32,19 @@ export default async function handler(req, res) {
     });
 
     const pred = await r.json();
-    if (!r.ok) {
-      console.error("❌ Replicate 응답 오류:", pred);
-      throw new Error(pred.error || pred.detail || "API 요청 실패");
-    }
+    if (!r.ok) throw new Error(pred.error || pred.detail || "Replicate API 오류");
 
-    // 2️⃣ Polling (Nano Banana 등 비동기 모델)
     let urls = [];
     if (Array.isArray(pred.output)) urls = pred.output;
     else if (typeof pred.output === "string") urls = [pred.output];
 
-    if ((!urls.length || !urls[0]) && pred.id) {
-      await new Promise((r) => setTimeout(r, 2000));
-      const poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
-        headers: { Authorization: `Token ${REPLICATE_API_KEY}` },
-      });
-      const p = await poll.json();
-      if (Array.isArray(p.output)) urls = p.output;
-      else if (typeof p.output === "string") urls = [p.output];
-    }
-
-    if (!urls.length) throw new Error("이미지 출력이 없습니다.");
     return res.status(200).json({ imageUrls: urls });
   } catch (err) {
-    console.error("서버 오류:", err);
+    console.error("🔥 generate.js Error:", err);
     return res.status(500).json({ message: err.message });
   }
 }
+
 
 
 /* 생성이미지 기반 변경 가능*/
