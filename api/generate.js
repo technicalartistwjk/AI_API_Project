@@ -1,174 +1,115 @@
-// /api/generate.js
+import Replicate from "replicate";
+
 export default async function handler(req, res) {
-  const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
+  const replicate = new Replicate({
+    auth: process.env.REPLICATE_API_KEY,
+  });
+
+  const { prompt, model, aspect_ratio, output_format = "jpg", imageCount = 1, imageUrls = [] } = req.body;
 
   console.log("===== 🟢 /api/generate 호출 시작 =====");
+  console.log("🧾 요청 데이터:", {
+    prompt,
+    model,
+    aspect_ratio,
+    output_format,
+    imageCount,
+    imageUrlsCount: imageUrls.length,
+  });
 
-  try {
-    const {
-      prompt,
-      model,
-      aspect_ratio,
-      output_format = "jpg",
-      imageCount = 1,
-      imageUrls = [], // base64 or HTTP URL
-    } = req.body;
+  if (!prompt) return res.status(400).json({ message: "⚠️ 프롬프트가 비어 있습니다." });
 
-    console.log("🧾 요청 데이터:", {
-      prompt: prompt?.slice(0, 80) + "...",
-      model,
-      aspect_ratio,
-      output_format,
-      imageCount,
-      imageUrlsCount: imageUrls.length,
-    });
+  // 모델 엔드포인트 정의
+  const MODEL_ENDPOINTS = {
+    "google/imagen-4-fast": "google/imagen-4-fast",
+    "google/nano-banana": "google/nano-banana",
+    "bytedance/seedream-4": "bytedance/seedream-4",
+  };
 
-    if (!prompt)
-      return res.status(400).json({ message: "⚠️ 프롬프트가 없습니다." });
+  const selectedModel = MODEL_ENDPOINTS[model];
+  if (!selectedModel) return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-    // ===== 모델 엔드포인트 설정 =====
-    const MODEL_ENDPOINTS = {
-      "google/imagen-4-fast": "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
-      "google/nano-banana": "https://api.replicate.com/v1/models/google/nano-banana/predictions",
-      "bytedance/seedream-4": "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions",
-    };
-    const endpoint = MODEL_ENDPOINTS[model];
-    if (!endpoint)
-      return res.status(400).json({ message: "❌ 유효하지 않은 모델입니다." });
+  // 이미지 입력 준비
+  let finalImageInputs = [];
 
-    // ===== base64 → Replicate 업로드 함수 =====
-    async function uploadBase64ToReplicate(base64Data) {
+  for (const img of imageUrls) {
+    if (img.startsWith("data:image/")) {
+      console.log("🧩 base64 이미지 감지 → Replicate SDK 자동 업로드 예정");
       try {
-        console.log("📤 Replicate 업로드 시작...");
-        const base64Content = base64Data.split(",")[1];
-        const binary = Buffer.from(base64Content, "base64");
-
-        const formData = new FormData();
-        // Blob 대신 Buffer 직접 전달
-        formData.append("file", new File([binary], "upload.png", { type: "image/png" }));
-
-        const response = await fetch("https://api.replicate.com/v1/files", {
-          method: "POST",
-          headers: {
-            Authorization: `Token ${REPLICATE_API_KEY}`,
-          },
-          body: formData,
-        });
-
-        const json = await response.json();
-        console.log("📦 Replicate 업로드 응답:", json);
-
-        if (!response.ok) throw new Error(json.detail || "파일 업로드 실패");
-        console.log("✅ 업로드 완료:", json.url);
-        return json.url;
+        const uploaded = await replicate.files.upload(img);
+        console.log("📤 업로드 완료:", uploaded);
+        finalImageInputs.push(uploaded);
       } catch (err) {
         console.error("🚫 업로드 실패:", err);
-        return null;
       }
+    } else {
+      finalImageInputs.push(img);
     }
+  }
 
-    // ===== 이미지 URL 정리 =====
-    const finalImageUrls = [];
-    for (const img of imageUrls) {
-      if (img.startsWith("data:image/")) {
-        console.log("🧩 base64 이미지 감지 → 업로드 중...");
-        const uploadedUrl = await uploadBase64ToReplicate(img);
-        if (uploadedUrl) finalImageUrls.push(uploadedUrl);
-      } else {
-        finalImageUrls.push(img);
-      }
-    }
+  console.log("🖼️ 최종 image_input 배열:", finalImageInputs);
 
-    console.log("🖼️ 최종 image_input 배열:", finalImageUrls);
+  // 모델별 입력 구성
+  let inputData = { prompt };
 
-    // ===== 모델별 입력 구성 =====
-    let inputData = {};
+  if (model === "google/imagen-4-fast") {
+    inputData = {
+      prompt,
+      aspect_ratio: aspect_ratio || "4:3",
+      output_format,
+      safety_filter_level: "block_only_high",
+    };
+  } else if (model === "google/nano-banana") {
+    inputData = {
+      prompt,
+      aspect_ratio: "1:1",
+      output_format,
+    };
+    if (finalImageInputs.length > 0) inputData.image_input = finalImageInputs;
+  } else if (model === "bytedance/seedream-4") {
+    inputData = {
+      size: "2K",
+      width: 2048,
+      height: 2048,
+      prompt,
+      max_images: imageCount,
+      aspect_ratio: aspect_ratio || "4:3",
+      output_format,
+      enhance_prompt: true,
+      sequential_image_generation: "disabled",
+    };
+    if (finalImageInputs.length > 0) inputData.image_input = finalImageInputs;
+  }
 
-    if (model === "google/imagen-4-fast") {
-      inputData = {
-        prompt,
-        aspect_ratio: aspect_ratio || "4:3",
-        output_format,
-        safety_filter_level: "block_only_high",
-      };
-    } else if (model === "google/nano-banana") {
-      inputData = {
-        prompt,
-        aspect_ratio: "1:1", // nano-banana는 고정
-        output_format,
-      };
-      if (finalImageUrls.length > 0)
-        inputData.image_input = finalImageUrls;
-    } else if (model === "bytedance/seedream-4") {
-      inputData = {
-        size: "2K",
-        width: 2048,
-        height: 2048,
-        prompt,
-        max_images: imageCount,
-        aspect_ratio: aspect_ratio || "4:3",
-        output_format,
-        enhance_prompt: true,
-        sequential_image_generation: "disabled",
-      };
-      if (finalImageUrls.length > 0)
-        inputData.image_input = finalImageUrls;
-    }
+  console.log("🧠 최종 inputData:", inputData);
 
-    console.log("🧠 최종 inputData:", inputData);
-
-    // ===== Replicate 호출 =====
-    const r = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Token ${REPLICATE_API_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "wait",
-      },
-      body: JSON.stringify({ input: inputData }),
+  try {
+    const prediction = await replicate.predictions.create({
+      model: selectedModel,
+      input: inputData,
+      wait: true,
     });
 
-    const pred = await r.json();
-    console.log("🔍 Replicate 응답:", pred);
+    console.log("🔍 Replicate 응답:", prediction);
 
-    if (!r.ok) {
-      console.error("🧨 Replicate 응답 오류:", pred);
-      throw new Error(pred.error || pred.detail || "API 요청 실패");
-    }
+    if (!prediction || prediction.error)
+      throw new Error(prediction.error || "예측 중 오류가 발생했습니다.");
 
-    // ===== 결과 파싱 =====
     let urls = [];
-    if (Array.isArray(pred.output)) urls = pred.output;
-    else if (typeof pred.output === "string") urls = [pred.output];
+    if (Array.isArray(prediction.output)) urls = prediction.output;
+    else if (typeof prediction.output === "string") urls = [prediction.output];
 
-    // ===== Nano Banana 지연 처리 (polling) =====
-    if (model === "google/nano-banana" && urls.length === 0 && pred.id) {
-      console.log("⏳ 출력 비어있음 → 2초 후 polling 시작:", pred.id);
-      await new Promise((r) => setTimeout(r, 2000));
-
-      const pollRes = await fetch(
-        `https://api.replicate.com/v1/predictions/${pred.id}`,
-        { headers: { Authorization: `Token ${REPLICATE_API_KEY}` } }
-      );
-      const pollJson = await pollRes.json();
-      console.log("🔁 Polling 결과:", pollJson);
-
-      if (Array.isArray(pollJson.output)) urls = pollJson.output;
-      else if (typeof pollJson.output === "string") urls = [pollJson.output];
-    }
-
-    if (!urls.length)
-      throw new Error("🚫 이미지 출력이 없습니다. 모델 처리 대기 중일 수 있습니다.");
+    if (!urls.length) throw new Error("🚫 이미지 출력이 없습니다.");
 
     console.log("✅ 최종 출력 이미지:", urls);
     console.log("===== 🟢 /api/generate 처리 완료 =====");
-
     res.status(200).json({ imageUrls: urls });
   } catch (err) {
     console.error("🔥 서버 내부 오류:", err);
     res.status(500).json({ message: err.message });
   }
 }
+
 
 
 /* 생성이미지 기반 변경 가능*/

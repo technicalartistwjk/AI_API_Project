@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     generateButton.disabled = true;
     generateButton.textContent = "이미지 생성 중...";
 
+    
     const imageUrls = [];
     if (addToInputToggle.checked && autoAddedImage) {
       imageUrls.push(autoAddedImage);
