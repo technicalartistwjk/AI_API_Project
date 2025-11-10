@@ -35,29 +35,19 @@ document.addEventListener("DOMContentLoaded", () => {
   modelSelect.addEventListener("change", updateRatios);
   updateRatios();
 
-  // ===== 파일 업로드 (Replicate Storage로 전달) =====
-  async function uploadFileAndGetUrl(file) {
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      headers: {
-        "x-file-name": file.name,
-        "x-content-type": file.type,
-      },
-      body: file, // body에 Blob 직접 전달
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data?.message || "파일 업로드 실패");
-    }
-
-    if (!data.url) {
-      throw new Error("서버에서 업로드 URL을 받지 못했습니다.");
-    }
-
-    return data.url;
-  }
-
+async function uploadFileAndGetUrl(file) {
+  const res = await fetch("/api/upload", {
+    method: "POST",
+    headers: {
+      "x-file-name": file.name,
+      "x-content-type": file.type,
+    },
+    body: file,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "파일 업로드 실패");
+  return data.url;
+}
   // ===== 이미지 생성 =====
   async function handleGenerate() {
     const prompt = promptInput.value.trim();
