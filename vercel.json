@@ -1,9 +1,6 @@
 {
   "functions": {
-    "api/generate.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/request_upload.js": {
+    "api/**": {
       "runtime": "nodejs18.x"
     }
   }
