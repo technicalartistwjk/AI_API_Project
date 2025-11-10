@@ -1,61 +1,67 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RTE AI Image Generator</title>
-</head>
-<body>
-  <h1>🧠 RTE AI Image Generator</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RTE AI Image Generator</title>
+  </head>
+  <body>
+    <h1>RTE AI Image Generator</h1>
 
-  <label>모델 선택:</label>
-  <select id="model-select">
-    <option value="google/imagen-4-fast">Google Imagen 4 Fast</option>
-    <option value="google/nano-banana">Google Nano Banana</option>
-    <option value="bytedance/seedream-4">Bytedance Seedream 4</option>
-  </select>
-  <br><br>
+    <label>모델 선택:</label>
+    <select id="model-select">
+      <option value="google/imagen-4-fast">Google Imagen 4 Fast</option>
+      <option value="google/nano-banana">Google Nano Banana</option>
+      <option value="bytedance/seedream-4">Bytedance Seedream 4</option>
+    </select>
+    <br /><br />
 
-  <label>비율 선택:</label>
-  <select id="ratio-select">
-    <option>1:1</option>
-    <option>4:3</option>
-    <option>3:2</option>
-    <option>16:9</option>
-  </select>
-  <br><br>
+    <label>비율 선택:</label>
+    <select id="ratio-select">
+      <option>1:1</option>
+      <option>4:3</option>
+      <option>3:2</option>
+      <option>16:9</option>
+    </select>
+    <br /><br />
 
-  <textarea id="prompt-input" rows="4" cols="50" placeholder="프롬프트를 입력하세요..."></textarea>
-  <br><br>
+    <textarea
+      id="prompt-input"
+      rows="4"
+      cols="50"
+      placeholder="프롬프트를 입력하세요..."
+    ></textarea>
+    <br /><br />
 
-  <label>출력 포맷:</label>
-  <select id="format-select">
-    <option value="jpg">JPG</option>
-    <option value="png">PNG</option>
-  </select>
+    <label>출력 포맷:</label>
+    <select id="format-select">
+      <option value="jpg">JPG</option>
+      <option value="png">PNG</option>
+    </select>
 
-  <label>생성 개수:</label>
-  <select id="image-count">
-    <option value="1">1장</option>
-    <option value="2">2장</option>
-    <option value="3">3장</option>
-  </select>
+    <label>생성 개수:</label>
+    <select id="image-count">
+      <option value="1">1장</option>
+      <option value="2">2장</option>
+      <option value="3">3장</option>
+    </select>
 
-  <hr>
-  <h3>📸 이미지 업로드</h3>
-  <input type="file" id="image-upload" accept="image/*" multiple>
+    <hr />
+    <h3>📸 이미지 업로드</h3>
+    <input type="file" id="image-upload" accept="image/*" multiple />
 
-  <hr>
-  <button id="generate-button">이미지 생성하기</button>
-  <button id="download-button" disabled>결과 다운로드</button>
+    <hr />
+    <button id="generate-button">이미지 생성하기</button>
+    <button id="download-button" disabled>결과 다운로드</button>
 
-  <h2>결과</h2>
-  <div id="result-container"></div>
+    <h2>결과</h2>
+    <div id="result-container"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="script.js" defer></script>
-</body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="script.js" defer></script>
+  </body>
 </html>
+
 
 <!--생성이미지 기반 변경 가능-->
 <!--

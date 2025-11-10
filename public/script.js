@@ -1,13 +1,13 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const modelSelect = document.getElementById('model-select');
-  const ratioSelect = document.getElementById('ratio-select');
-  const promptInput = document.getElementById('prompt-input');
-  const generateButton = document.getElementById('generate-button');
-  const resultContainer = document.getElementById('result-container');
-  const downloadButton = document.getElementById('download-button');
-  const imageUpload = document.getElementById('image-upload');
-  const formatSelect = document.getElementById('format-select');
-  const imageCount = document.getElementById('image-count');
+document.addEventListener("DOMContentLoaded", () => {
+  const modelSelect = document.getElementById("model-select");
+  const ratioSelect = document.getElementById("ratio-select");
+  const promptInput = document.getElementById("prompt-input");
+  const generateButton = document.getElementById("generate-button");
+  const resultContainer = document.getElementById("result-container");
+  const downloadButton = document.getElementById("download-button");
+  const imageUpload = document.getElementById("image-upload");
+  const formatSelect = document.getElementById("format-select");
+  const imageCount = document.getElementById("image-count");
 
   let generatedImages = [];
 
@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
       method: "POST",
       headers: {
         "x-file-name": file.name,
+        "x-content-type": file.type,
       },
       body: file,
     });
@@ -35,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!prompt) return alert("프롬프트를 입력해주세요!");
 
     generateButton.disabled = true;
-    generateButton.textContent = "생성 중...";
+    generateButton.textContent = "이미지 생성 중...";
     resultContainer.innerHTML = "";
     generatedImages = [];
 
@@ -44,13 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const uploadedUrls = [];
       const files = Array.from(imageUpload.files);
       for (let i = 0; i < files.length; i++) {
-        generateButton.textContent = `이미지 업로드 중 (${i + 1}/${files.length})...`;
+        generateButton.textContent = `업로드 중 (${i + 1}/${files.length})...`;
         const url = await uploadFileAndGetUrl(files[i]);
         uploadedUrls.push(url);
       }
 
       // 2️⃣ Replicate 호출
-      generateButton.textContent = "Replicate 호출 중...";
+      generateButton.textContent = "모델 실행 중...";
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const zip = new JSZip();
       let i = 1;
       for (const url of generatedImages) {
-        const blob = await fetch(url).then(r => r.blob());
+        const blob = await fetch(url).then((r) => r.blob());
         zip.file(`image_${i++}.jpg`, blob);
       }
       const content = await zip.generateAsync({ type: "blob" });
@@ -114,8 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  generateButton.addEventListener('click', handleGenerate);
-  downloadButton.addEventListener('click', handleDownload);
+  generateButton.addEventListener("click", handleGenerate);
+  downloadButton.addEventListener("click", handleDownload);
 });
 
 

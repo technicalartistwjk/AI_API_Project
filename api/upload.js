@@ -1,9 +1,7 @@
 // /api/upload.js
-// ✅ Works on Vercel (no local writes, uses Replicate upload API)
-
 export const config = {
   api: {
-    bodyParser: false, // 파일 스트림 직접 받기
+    bodyParser: false, // 파일을 스트림으로 수신
   },
 };
 
@@ -13,55 +11,42 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 🔹 파일 이름 및 타입
     const fileName = req.headers["x-file-name"] || `upload_${Date.now()}.jpg`;
     const contentType = req.headers["x-content-type"] || "image/jpeg";
 
-    // 🔹 Replicate 업로드용 URL 요청
-    const uploadReq = await fetch("https://api.replicate.com/v1/uploads", {
-      method: "POST",
-      headers: {
-        "Authorization": `Token ${process.env.REPLICATE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        file_name: fileName,
-        content_type: contentType,
-      }),
-    });
-
-    const uploadData = await uploadReq.json();
-    if (!uploadReq.ok) {
-      console.error("❌ Failed to request Replicate upload URL:", uploadData);
-      return res.status(500).json(uploadData);
-    }
-
-    const { upload_url, serving_url } = uploadData;
-    if (!upload_url || !serving_url) {
-      throw new Error("Replicate upload response missing URL fields");
-    }
-
-    // 🔹 클라이언트가 보낸 파일을 그대로 Replicate로 전송
+    // 브라우저가 전송한 파일 읽기
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     const fileBuffer = Buffer.concat(chunks);
 
-    const putRes = await fetch(upload_url, {
-      method: "PUT",
-      headers: { "Content-Type": contentType },
-      body: fileBuffer,
+    // multipart/form-data 본문 생성
+    const formData = new FormData();
+    const blob = new Blob([fileBuffer], { type: contentType });
+    formData.append("file", blob, fileName);
+
+    // Replicate API 호출
+    const uploadRes = await fetch("https://api.replicate.com/v1/files", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.REPLICATE_API_KEY}`,
+      },
+      body: formData,
     });
 
-    if (!putRes.ok) {
-      console.error("❌ Failed to PUT file to Replicate storage:", await putRes.text());
-      return res.status(500).json({ message: "File upload to Replicate failed" });
+    const uploadData = await uploadRes.json();
+    console.log("📤 Replicate upload response:", uploadData);
+
+    if (!uploadRes.ok) {
+      return res.status(uploadRes.status).json(uploadData);
     }
 
-    // ✅ 성공적으로 업로드 완료
-    console.log("✅ Uploaded to Replicate:", serving_url);
-    return res.status(200).json({ url: serving_url });
+    const publicUrl = uploadData.url;
+    if (!publicUrl) throw new Error("No URL returned from Replicate");
+
+    console.log("✅ Uploaded to Replicate:", publicUrl);
+    return res.status(200).json({ url: publicUrl });
   } catch (err) {
-    console.error("🔥 Upload handler error:", err);
+    console.error("🔥 Upload error:", err);
     return res.status(500).json({ message: err.message });
   }
 }

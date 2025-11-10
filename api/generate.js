@@ -3,20 +3,31 @@ export default async function handler(req, res) {
   const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
 
   try {
-    const { prompt, model, aspect_ratio, output_format = "jpg", imageUrls = [], imageCount = 1 } = req.body;
+    const {
+      prompt,
+      model,
+      aspect_ratio,
+      output_format = "jpg",
+      imageUrls = [],
+      imageCount = 1,
+    } = req.body;
 
-    if (!prompt) return res.status(400).json({ message: "프롬프트가 없습니다." });
+    if (!prompt)
+      return res.status(400).json({ message: "프롬프트가 없습니다." });
 
     const MODEL_ENDPOINTS = {
-      "google/imagen-4-fast": "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
-      "google/nano-banana": "https://api.replicate.com/v1/models/google/nano-banana/predictions",
-      "bytedance/seedream-4": "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions",
+      "google/imagen-4-fast":
+        "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
+      "google/nano-banana":
+        "https://api.replicate.com/v1/models/google/nano-banana/predictions",
+      "bytedance/seedream-4":
+        "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions",
     };
     const endpoint = MODEL_ENDPOINTS[model];
-    if (!endpoint) return res.status(400).json({ message: "유효하지 않은 모델입니다." });
+    if (!endpoint)
+      return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
     const inputData = { prompt, aspect_ratio, output_format };
-
     if (imageUrls.length > 0) {
       inputData.image = imageUrls;
       inputData.image_input = imageUrls;
@@ -25,7 +36,7 @@ export default async function handler(req, res) {
     const r = await fetch(endpoint, {
       method: "POST",
       headers: {
-        Authorization: `Token ${REPLICATE_API_KEY}`,
+        Authorization: `Bearer ${REPLICATE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ input: inputData }),
