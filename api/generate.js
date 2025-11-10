@@ -41,14 +41,17 @@ export default async function handler(req, res) {
       try {
         console.log("📤 Replicate 업로드 시작...");
         const base64Content = base64Data.split(",")[1];
-        const binary = Uint8Array.from(atob(base64Content), (c) => c.charCodeAt(0));
-        const blob = new Blob([binary]);
+        const binary = Buffer.from(base64Content, "base64");
+
         const formData = new FormData();
-        formData.append("file", blob, "upload.png");
+        // Blob 대신 Buffer 직접 전달
+        formData.append("file", new File([binary], "upload.png", { type: "image/png" }));
 
         const response = await fetch("https://api.replicate.com/v1/files", {
           method: "POST",
-          headers: { Authorization: `Token ${REPLICATE_API_KEY}` },
+          headers: {
+            Authorization: `Token ${REPLICATE_API_KEY}`,
+          },
           body: formData,
         });
 
