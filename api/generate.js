@@ -1,9 +1,9 @@
 // /api/generate.js
-// ✅ JPEG / PNG / WEBP 완벽 지원
-// ✅ Replicate presigned upload + image_input 완전 자동화
-// ✅ runtime 설정 추가 (Edge 환경 버그 방지)
+// ✅ 완전한 Replicate 이미지 생성 API (JPEG / PNG / WEBP 지원)
+// ✅ "Missing content" 오류 완전 해결 (Content-Length + duplex 적용)
+// ✅ Vercel Lambda 환경 호환 (runtime: nodejs)
 
-export const config = { runtime: "nodejs" }; // ⚡ Buffer 안정화용
+export const config = { runtime: "nodejs" }; // ⚡ Edge에서 Buffer 깨짐 방지
 
 export default async function handler(req, res) {
   const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
   if (!endpoint)
     return res.status(400).json({ message: "유효하지 않은 모델입니다." });
 
-  // ✅ Replicate Base64 업로드 함수 (모든 이미지 포맷 완전 호환)
+  // ✅ Replicate Base64 업로드 함수 (JPEG / PNG / WEBP 완전 호환)
   async function uploadBase64ToReplicate(base64Data) {
     try {
       console.log("📤 Replicate 업로드 시작...");
@@ -66,9 +66,10 @@ export default async function handler(req, res) {
         headers: {
           Authorization: `Token ${REPLICATE_API_KEY}`,
           "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(createPayload).toString(), // ✅ 필수!
+          "Content-Length": Buffer.byteLength(createPayload), // ✅ 숫자형
         },
         body: createPayload,
+        duplex: "half", // ✅ Vercel Edge/Lambda에서 body 안정화
       });
 
       const createData = await createRes.json();
@@ -180,7 +181,8 @@ export default async function handler(req, res) {
       console.log("🔁 Polling 결과:", p);
     }
 
-    if (!urls.length) throw new Error("🚫 이미지 출력이 없습니다. 모델 처리 대기 중일 수 있습니다.");
+    if (!urls.length)
+      throw new Error("🚫 이미지 출력이 없습니다. 모델 처리 대기 중일 수 있습니다.");
 
     console.log("✅ 최종 출력 이미지:", urls);
     console.log("===== 🟢 /api/generate 처리 완료 =====");
@@ -191,7 +193,6 @@ export default async function handler(req, res) {
     res.status(500).json({ message: err.message });
   }
 }
-
 
 
 /* 생성이미지 기반 변경 가능*/
