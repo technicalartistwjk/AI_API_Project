@@ -1,10 +1,4 @@
 // /api/upload.js
-/**
- * Replicate 업로드용 최신 버전 (2025년 기준)
- * 1️⃣ signed upload URL 발급 (POST /v1/files)
- * 2️⃣ 클라이언트 파일을 해당 URL에 PUT
- * 3️⃣ 최종 공개 URL(serving_url) 반환
- */
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
@@ -17,7 +11,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "Missing headers (x-file-name, x-content-type)" });
     }
 
-    // 1️⃣ Replicate에 업로드 URL 요청
+    // 1️⃣ Replicate 업로드 URL 요청
     const createRes = await fetch("https://api.replicate.com/v1/files", {
       method: "POST",
       headers: {
@@ -25,7 +19,7 @@ export default async function handler(req, res) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        filename: fileName,
+        file_name: fileName,      // ✅ 여기 중요! filename ❌ → file_name ✅
         content_type: contentType,
       }),
     });
@@ -41,7 +35,7 @@ export default async function handler(req, res) {
 
     const { upload_url, serving_url } = createData;
 
-    // 2️⃣ 클라이언트 파일을 Replicate signed URL로 업로드
+    // 2️⃣ 클라이언트 파일을 Replicate로 PUT 업로드
     const chunks = [];
     for await (const chunk of req) {
       chunks.push(chunk);
@@ -62,7 +56,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ message: "File upload to Replicate failed" });
     }
 
-    // 3️⃣ 성공 시 최종 URL 반환
     console.log("✅ File uploaded successfully:", serving_url);
     return res.status(200).json({ url: serving_url });
   } catch (err) {
