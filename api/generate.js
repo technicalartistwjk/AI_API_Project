@@ -1,52 +1,34 @@
 import https from "https";
 
-export const config = { runtime: "nodejs" }; // ⚙️ Lambda 안정화용
+export const config = { runtime: "nodejs" };
 
 export default async function handler(req, res) {
   const REPLICATE_API_KEY = process.env.REPLICATE_API_KEY;
-  if (!REPLICATE_API_KEY)
-    return res.status(500).json({ message: "❌ REPLICATE_API_KEY 미설정" });
-
-  const {
-    prompt,
-    model,
-    aspect_ratio,
-    output_format = "jpg",
-    imageCount = 1,
-    imageUrls = [],
-  } = req.body || {};
+  const { prompt, model, aspect_ratio = "1:1", output_format = "jpg", imageUrls = [] } = req.body || {};
 
   console.log("===== 🟢 /api/generate 호출 시작 =====");
   console.log("🧾 요청 데이터:", { prompt, model, imageUrlsCount: imageUrls?.length });
 
-  if (!prompt) return res.status(400).json({ message: "프롬프트 누락" });
-
-  const MODEL_ENDPOINTS = {
-    "google/imagen-4-fast": "https://api.replicate.com/v1/models/google/imagen-4-fast/predictions",
-    "google/nano-banana": "https://api.replicate.com/v1/models/google/nano-banana/predictions",
-    "bytedance/seedream-4": "https://api.replicate.com/v1/models/bytedance/seedream-4/predictions",
-  };
-  const endpoint = MODEL_ENDPOINTS[model];
-  if (!endpoint)
-    return res.status(400).json({ message: "유효하지 않은 모델" });
-
-  // ✅ Base64 → Replicate 업로드 (Node HTTPS 방식)
+  // --- 1️⃣ base64 → Replicate 업로드 (디버그 로그용)
   async function uploadBase64ToReplicate(base64Data) {
     try {
       console.log("📤 업로드 시작...");
-
       const mimeMatch = base64Data.match(/^data:(image\/[a-zA-Z+]+);base64,/);
       const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
-      const ext = mimeType.split("/")[1] || "png";
+      const ext = mimeType.split("/")[1];
       const base64Content = base64Data.split(",")[1];
       const buffer = Buffer.from(base64Content, "base64");
+
+      console.log(`🧩 mimeType=${mimeType}, ext=${ext}, bufferSize=${buffer.length}`);
+
+      if (buffer.length === 0) throw new Error("⚠️ base64 변환 후 버퍼가 비어 있음");
 
       const payload = JSON.stringify({
         file_name: `upload.${ext}`,
         content_type: mimeType,
       });
+      console.log("📦 presign payload:", payload);
 
-      // ✅ Step 1: Presigned URL 생성 (fetch 대신 https 사용)
       const createData = await new Promise((resolve, reject) => {
         const options = {
           hostname: "api.replicate.com",
@@ -64,10 +46,11 @@ export default async function handler(req, res) {
           let data = "";
           resp.on("data", (chunk) => (data += chunk));
           resp.on("end", () => {
+            console.log("📨 presign raw:", data);
             try {
               const json = JSON.parse(data);
               if (resp.statusCode >= 400)
-                reject(new Error(json.detail || json.error || "파일 presign 실패"));
+                reject(new Error(json.detail || json.error || "presign 실패"));
               else resolve(json);
             } catch (e) {
               reject(e);
@@ -80,18 +63,18 @@ export default async function handler(req, res) {
         req.end();
       });
 
-      console.log("📨 presign 응답:", createData);
+      console.log("✅ presign OK:", createData);
 
-      // ✅ Step 2: 실제 S3 업로드
       const putRes = await fetch(createData.upload_url, {
         method: "PUT",
         headers: { "Content-Type": mimeType },
         body: buffer,
       });
 
+      console.log("📤 S3 PUT 상태:", putRes.status);
       if (!putRes.ok) throw new Error(`S3 업로드 실패 (${putRes.status})`);
 
-      console.log("✅ 업로드 성공:", createData.serving_url);
+      console.log("✅ 업로드 완료:", createData.serving_url);
       return createData.serving_url;
     } catch (err) {
       console.error("🚫 업로드 실패:", err);
@@ -99,7 +82,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ✅ Base64 이미지 URL 변환
+  // --- 2️⃣ Base64 업로드 테스트
   let uploadedUrls = [];
   for (const img of imageUrls) {
     if (img.startsWith("data:image/")) {
@@ -110,69 +93,27 @@ export default async function handler(req, res) {
 
   console.log("🖼️ 최종 image_input:", uploadedUrls);
 
-  // ✅ 모델별 입력 구성
-  let inputData = { prompt };
-  if (model === "google/nano-banana") {
-    inputData = { prompt, aspect_ratio: "1:1", output_format };
-    if (uploadedUrls.length > 0) inputData.image_input = uploadedUrls;
-  } else if (model === "google/imagen-4-fast") {
-    inputData = { prompt, aspect_ratio: aspect_ratio || "4:3", output_format };
-  } else if (model === "bytedance/seedream-4") {
-    inputData = {
-      prompt,
-      aspect_ratio: aspect_ratio || "4:3",
-      output_format,
-      size: "2K",
-      width: 2048,
-      height: 2048,
-      enhance_prompt: true,
-    };
-    if (uploadedUrls.length > 0) inputData.image_input = uploadedUrls;
-  }
-
+  // --- 3️⃣ 모델 요청 구성
+  const endpoint = "https://api.replicate.com/v1/models/google/nano-banana/predictions";
+  const inputData = { prompt, aspect_ratio, output_format };
+  if (uploadedUrls.length > 0) inputData.image_input = uploadedUrls;
   console.log("🧠 최종 inputData:", inputData);
 
-  try {
-    // ✅ Step 3: 모델 호출
-    const r = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Token ${REPLICATE_API_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "wait",
-      },
-      body: JSON.stringify({ input: inputData }),
-    });
+  // --- 4️⃣ Replicate 모델 요청
+  const r = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Token ${REPLICATE_API_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "wait",
+    },
+    body: JSON.stringify({ input: inputData }),
+  });
+  const pred = await r.json();
 
-    const pred = await r.json();
-    console.log("🔍 Replicate 응답:", pred);
-
-    if (!r.ok) throw new Error(pred.error || pred.detail || "모델 요청 실패");
-
-    let urls = [];
-    if (Array.isArray(pred.output)) urls = pred.output;
-    else if (typeof pred.output === "string") urls = [pred.output];
-
-    if (model === "google/nano-banana" && urls.length === 0 && pred.id) {
-      console.log("⏳ 출력 polling 시작...");
-      await new Promise((r) => setTimeout(r, 2000));
-      const poll = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
-        headers: { Authorization: `Token ${REPLICATE_API_KEY}` },
-      });
-      const p = await poll.json();
-      if (Array.isArray(p.output)) urls = p.output;
-      else if (typeof p.output === "string") urls = [p.output];
-      console.log("🔁 Polling 결과:", p);
-    }
-
-    if (!urls.length) throw new Error("🚫 이미지 출력 없음");
-
-    console.log("✅ 최종 출력:", urls);
-    res.status(200).json({ imageUrls: urls });
-  } catch (err) {
-    console.error("🔥 서버 오류:", err);
-    res.status(500).json({ message: err.message });
-  }
+  console.log("🔍 모델 응답:", pred);
+  const urls = Array.isArray(pred.output) ? pred.output : [pred.output].filter(Boolean);
+  res.status(200).json({ imageUrls: urls });
 }
 
 
