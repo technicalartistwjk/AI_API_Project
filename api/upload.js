@@ -1,4 +1,3 @@
-// /api/upload.js
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
@@ -8,20 +7,26 @@ export default async function handler(req, res) {
     const fileName = req.headers["x-file-name"];
     const contentType = req.headers["x-content-type"];
     if (!fileName || !contentType) {
-      return res.status(400).json({ message: "Missing headers (x-file-name, x-content-type)" });
+      return res.status(400).json({
+        message: "Missing headers (x-file-name, x-content-type)",
+      });
     }
 
-    // 1️⃣ Replicate 업로드 URL 요청
+    // ✅ JSON 바디 미리 문자열화
+    const bodyJson = JSON.stringify({
+      file_name: fileName,
+      content_type: contentType,
+    });
+
+    // ✅ Replicate 파일 생성 요청 (signed upload URL 받기)
     const createRes = await fetch("https://api.replicate.com/v1/files", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.REPLICATE_API_KEY}`,
         "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(bodyJson).toString(), // 👈 명시적 추가
       },
-      body: JSON.stringify({
-        file_name: fileName,      // ✅ 여기 중요! filename ❌ → file_name ✅
-        content_type: contentType,
-      }),
+      body: bodyJson,
     });
 
     const createData = await createRes.json().catch(() => ({}));
@@ -35,7 +40,7 @@ export default async function handler(req, res) {
 
     const { upload_url, serving_url } = createData;
 
-    // 2️⃣ 클라이언트 파일을 Replicate로 PUT 업로드
+    // ✅ 클라이언트 파일을 Replicate signed URL로 업로드
     const chunks = [];
     for await (const chunk of req) {
       chunks.push(chunk);
