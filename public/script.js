@@ -34,20 +34,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   modelSelect.addEventListener("change", updateRatios);
   updateRatios();
-
+  
+// /public/script.js 중 업로드 함수
 async function uploadFileAndGetUrl(file) {
   const res = await fetch("/api/upload", {
     method: "POST",
     headers: {
       "x-file-name": file.name,
       "x-content-type": file.type,
+      // 절대 'Content-Type' 직접 지정하지 마! (브라우저가 자동으로 적절히 처리)
     },
-    body: file,
+    body: file, // ✅ Blob 그대로 보냄
   });
+
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "파일 업로드 실패");
-  return data.url;
+  if (!res.ok) throw new Error(data?.message || "파일 업로드 실패");
+  return data.url; // https://replicate.delivery/pb/xxx/yyy.jpg
 }
+
   // ===== 이미지 생성 =====
   async function handleGenerate() {
     const prompt = promptInput.value.trim();
