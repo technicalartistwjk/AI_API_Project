@@ -21,50 +21,52 @@ export default async function handler(req, res) {
   // ===============================
   // 🧠 Base64 → Replicate 파일 업로드
   // ===============================
-  async function uploadBase64ToReplicate(base64Data) {
-    console.log("📤 업로드 시작...");
-    const mimeMatch = base64Data.match(/^data:(image\/[a-zA-Z+]+);base64,/);
-    const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
-    const ext = mimeType.split("/")[1];
-    const base64Content = base64Data.split(",")[1];
-    const buffer = Buffer.from(base64Content, "base64");
-    console.log(`🧩 mimeType=${mimeType}, ext=${ext}, bufferSize=${buffer.length}`);
+async function uploadBase64ToReplicate(base64Data) {
+  console.log("📤 업로드 시작...");
+  const mimeMatch = base64Data.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+  const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+  const ext = mimeType.split("/")[1];
+  const base64Content = base64Data.split(",")[1];
+  const buffer = Buffer.from(base64Content, "base64");
+  console.log(`🧩 mimeType=${mimeType}, ext=${ext}, bufferSize=${buffer.length}`);
 
-    // 1️⃣ presigned URL 요청
-    const presignRes = await fetch("https://api.replicate.com/v1/files", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${REPLICATE_API_KEY}`
-      },
-      body: JSON.stringify({
-        filename: `upload.${ext}`,
-        content_type: mimeType
-      })
-    });
+  // 1️⃣ presigned URL 요청 (필드명 변경됨!)
+  const presignRes = await fetch("https://api.replicate.com/v1/files", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${process.env.REPLICATE_API_KEY}`
+    },
+    body: JSON.stringify({
+      name: `upload.${ext}`,
+      contentType: mimeType
+    })
+  });
 
-    const presignJson = await presignRes.json();
-    console.log("📦 presign 응답:", presignJson);
+  const presignJson = await presignRes.json();
+  console.log("📦 presign 응답:", presignJson);
 
-    if (!presignRes.ok || !presignJson.upload_url) {
-      throw new Error(presignJson.detail || "presign URL 발급 실패");
-    }
-
-    // 2️⃣ PUT 업로드
-    const putRes = await fetch(presignJson.upload_url, {
-      method: "PUT",
-      headers: { "Content-Type": mimeType },
-      body: buffer
-    });
-
-    if (!putRes.ok) {
-      const errText = await putRes.text();
-      throw new Error(`PUT 업로드 실패: ${putRes.status} ${errText}`);
-    }
-
-    console.log("✅ 업로드 완료:", presignJson.serving_url);
-    return presignJson.serving_url;
+  if (!presignRes.ok || !presignJson.upload_url) {
+    throw new Error(presignJson.detail || "presign URL 발급 실패");
   }
+
+  // 2️⃣ 실제 파일 PUT 업로드
+  const putRes = await fetch(presignJson.upload_url, {
+    method: "PUT",
+    headers: { "Content-Type": mimeType },
+    body: buffer
+  });
+
+  if (!putRes.ok) {
+    const errText = await putRes.text();
+    throw new Error(`PUT 업로드 실패: ${putRes.status} ${errText}`);
+  }
+
+  console.log("✅ 업로드 완료:", presignJson.serving_url);
+  return presignJson.serving_url;
+}
+
+
 
   // ===============================
   // 🧩 이미지 업로드 루프
