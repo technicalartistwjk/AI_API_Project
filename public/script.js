@@ -1,9 +1,6 @@
-/*생성이미지 기반 변경 가능*/
 document.addEventListener('DOMContentLoaded', () => {
   const modelSelect = document.getElementById('model-select');
   const ratioSelect = document.getElementById('ratio-select');
-  const modelInfo = document.getElementById('model-info');
-  const ratioInfo = document.getElementById('ratio-info');
   const promptInput = document.getElementById('prompt-input');
   const generateButton = document.getElementById('generate-button');
   const resultContainer = document.getElementById('result-container');
@@ -12,64 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const addToInputToggle = document.getElementById('add-to-input-toggle');
   const formatSelect = document.getElementById('format-select');
   const imageCount = document.getElementById('image-count');
-  const countInfo = document.getElementById('count-info');
 
-  let autoAddedImage = null;
   let generatedImages = [];
+  let autoAddedImage = null;
 
-  const MODEL_INFO = {
-    "google/imagen-4-fast": "Google Imagen 4 Fast — 약 $0.02(28.9원) / 빠른 속도, 보통 화질",
-    "google/nano-banana": "Google Nano Banana — 약 $0.039(56.36원) / 고품질, 이미지 편집 지원 (Gemini 2.5)",
-    "bytedance/seedream-4": "Bytedance Seedream 4 — 약 $0.03(43.35원) / 4K 고화질 이미지 생성"
-  };
-
-  const MODEL_RATIOS = {
-    "google/imagen-4-fast": ["1:1", "4:3", "3:2", "16:9"],
-    "google/nano-banana": ["1:1", "4:3", "3:4", "16:9", "9:16"],
-    "bytedance/seedream-4": ["1:1", "4:3", "3:4", "16:9"]
-  };
-
-  const MULTI_IMAGE_SUPPORT = {
-    "google/imagen-4-fast": false,
-    "google/nano-banana": true,
-    "bytedance/seedream-4": true
-  };
-
-  modelSelect.addEventListener('change', () => {
-    const selectedModel = modelSelect.value;
-    modelInfo.textContent = MODEL_INFO[selectedModel];
-
-    ratioSelect.innerHTML = "";
-    MODEL_RATIOS[selectedModel].forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r;
-      opt.textContent = r;
-      ratioSelect.appendChild(opt);
-    });
-    ratioInfo.textContent = `지원 비율: ${MODEL_RATIOS[selectedModel].join(", ")}`;
-
-    const disableImageInput = selectedModel === "google/imagen-4-fast";
-    imageUpload.disabled = disableImageInput;
-    addToInputToggle.disabled = disableImageInput;
-    document.getElementById("image-upload-section").style.opacity = disableImageInput ? "0.5" : "1.0";
-    document.getElementById("add-to-input-container").style.opacity = disableImageInput ? "0.5" : "1.0";
-
-    const supportsMulti = MULTI_IMAGE_SUPPORT[selectedModel];
-    imageCount.disabled = !supportsMulti;
-    countInfo.textContent = supportsMulti ? "최대 5장까지 생성 가능" : "이 모델은 단일 이미지만 생성 가능합니다.";
-  });
-
-  modelSelect.dispatchEvent(new Event('change'));
-
-  generateButton.addEventListener('click', handleGenerate);
-  downloadButton.addEventListener('click', handleDownload);
-
-  // [신규] 파일 업로드 헬퍼 함수
-  // 1. /api/request_upload 에 요청해서 URL을 받고
-  // 2. 그 URL(upload_url)에 파일을 직접 PUT으로 업로드
-  // 3. 최종 URL(serving_url)을 반환
+  // [업로드 헬퍼]
   async function uploadFileAndGetUrl(file) {
-    // 1. 업로드 URL 요청
+    console.log("📤 업로드 요청:", file.name);
+
     const uploadRequestRes = await fetch('/api/request_upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -78,29 +25,28 @@ document.addEventListener('DOMContentLoaded', () => {
         content_type: file.type,
       }),
     });
+
     if (!uploadRequestRes.ok) {
       throw new Error(`업로드 URL 요청 실패: ${file.name}`);
     }
-    const { upload_url, serving_url } = await uploadRequestRes.json();
 
-    // 2. 파일 업로드 (Replicate 스토리지로 직접)
+    const { upload_url, serving_url } = await uploadRequestRes.json();
+    if (!upload_url || !serving_url)
+      throw new Error("upload_url/serving_url 누락됨");
+
+    console.log("⬆️ 파일 업로드 중:", serving_url);
     const uploadRes = await fetch(upload_url, {
       method: 'PUT',
-      headers: {
-        'Content-Type': file.type,
-      },
+      headers: { 'Content-Type': file.type },
       body: file,
     });
-    if (!uploadRes.ok) {
-      throw new Error(`파일 업로드 실패: ${file.name}`);
-    }
-
-    // 3. 최종 URL 반환
+    if (!uploadRes.ok) throw new Error(`파일 업로드 실패: ${file.name}`);
     return serving_url;
   }
 
+  // [이미지 생성]
   async function handleGenerate() {
-    const prompt = promptInput.value;
+    const prompt = promptInput.value.trim();
     const model = modelSelect.value;
     const aspect_ratio = ratioSelect.value;
     const output_format = formatSelect.value;
@@ -111,107 +57,94 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     resultContainer.innerHTML = "";
-    generatedImages = [];
     downloadButton.disabled = true;
     generateButton.disabled = true;
-    generateButton.textContent = "이미지 생성 중...";
+    generateButton.textContent = "🚀 업로드 중...";
 
-    try { // [수정] 전체 로직을 try...catch로 묶어 에러 처리
-        
-      // [수정] 업로드 로직 변경
+    try {
       const imageUrls = [];
-      
-      // 1. 체크박스에 체크된 '이전 결과 이미지' URL 추가 (이건 이미 URL이라 업로드 필요 없음)
+
+      // 이전 결과 이미지 추가
       if (addToInputToggle.checked && autoAddedImage) {
         imageUrls.push(autoAddedImage);
       }
 
-      // 2. <input>에 새로 추가된 파일들 업로드
-      const filesToUpload = Array.from(imageUpload.files);
-      if (!imageUpload.disabled && filesToUpload.length > 0) {
-        
-        generateButton.textContent = `이미지 업로드 중 (0/${filesToUpload.length})...`;
-
-        // Promise.all을 사용해 모든 파일을 병렬로 업로드
-        const uploadPromises = filesToUpload.map((file, index) => {
-            return uploadFileAndGetUrl(file).then(url => {
-                // UI 업데이트 (선택 사항)
-                generateButton.textContent = `이미지 업로드 중 (${index + 1}/${filesToUpload.length})...`;
-                return url; // 성공한 serving_url 반환
-            });
-        });
-        
-        const uploadedUrls = await Promise.all(uploadPromises);
-        imageUrls.push(...uploadedUrls);
+      // 새 이미지 업로드
+      const files = Array.from(imageUpload.files);
+      for (let i = 0; i < files.length; i++) {
+        const url = await uploadFileAndGetUrl(files[i]);
+        imageUrls.push(url);
+        generateButton.textContent = `업로드 중 (${i + 1}/${files.length})...`;
       }
-      
-      generateButton.textContent = "Replicate 모델 실행 중...";
 
-      // [수정] /api/generate 에는 '최종 URL 배열'만 전달
+      // 모델 실행
+      generateButton.textContent = "🤖 Replicate 모델 실행 중...";
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-            prompt, 
-            model, 
-            aspect_ratio, 
-            output_format, 
-            imageCount: count, 
-            imageUrls // 이 배열은 이제 Base64가 아닌 URL만 담고 있음
-        })
+        body: JSON.stringify({
+          prompt,
+          model,
+          aspect_ratio,
+          output_format,
+          imageCount: count,
+          imageUrls,
+        }),
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        // [수정] 오류 메시지를 data.message에서 가져옴
-        throw new Error(data.message || "API 오류");
-      }
+      if (!res.ok) throw new Error(data.message || "API 오류");
 
-      // 결과 표시 로직 (기존과 동일)
+      // 결과 표시
       const urls = data.imageUrls || [data.imageUrl];
-      urls.forEach(url => {
+      generatedImages = urls;
+      autoAddedImage = urls[0];
+      resultContainer.innerHTML = "";
+      urls.forEach((url) => {
         const img = document.createElement("img");
         img.src = url;
         img.width = 512;
         resultContainer.appendChild(img);
       });
-      generatedImages = urls;
-      autoAddedImage = urls[0];
-      downloadButton.disabled = false;
 
-    } catch (error) { // [신규] 에러 처리
-      console.error(error);
-      alert(error.message);
-      resultContainer.innerHTML = `<p style="color:red;">오류: ${error.message}</p>`;
-    } finally { // [신규]
-      generateButton.textContent = "이미지 생성하기";
+      downloadButton.disabled = false;
+      generateButton.textContent = "✅ 완료";
+    } catch (err) {
+      console.error("❌ handleGenerate Error:", err);
+      resultContainer.innerHTML = `<p style="color:red;">오류: ${err.message}</p>`;
+      alert(err.message);
+    } finally {
       generateButton.disabled = false;
+      generateButton.textContent = "이미지 생성하기";
     }
   }
 
   async function handleDownload() {
+    if (generatedImages.length === 0) return;
     if (generatedImages.length === 1) {
       const link = document.createElement("a");
       link.href = generatedImages[0];
       link.download = "generated_image.jpg";
       link.click();
-    } else if (generatedImages.length > 1) {
+    } else {
       const zip = new JSZip();
       let i = 1;
       for (const url of generatedImages) {
         const blob = await fetch(url).then(r => r.blob());
         zip.file(`image_${i++}.jpg`, blob);
       }
-      const content = await zip.generateAsync({ type: "blob" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(content);
-      link.download = "generated_images.zip";
-      link.click();
+      const blob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "generated_images.zip";
+      a.click();
     }
   }
 
-  // [삭제] fileToBase64 함수는 더 이상 필요 없으므로 삭제합니다.
+  generateButton.addEventListener('click', handleGenerate);
+  downloadButton.addEventListener('click', handleDownload);
 });
+
 
 /*생성이미지 기반 변경 가능*/
 /*
