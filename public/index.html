@@ -1,6 +1,3 @@
-
-
-<!--생성이미지 기반 변경 가능-->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -72,87 +69,77 @@
   <script src="script.js" defer></script>
 </body>
 </html>
-
-
+<!--생성이미지 기반 변경 가능-->
 <!--
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RTE AI API Tool</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RTE AI Image Generator</title>
 </head>
 <body>
 
-  <h1>RTE AI Test Tool</h1>
+  <h1>RTE AI Tool</h1>
 
-  <label for="model-select">이미지 모델 선택:</label>
+  <label for="model-select">모델 선택:</label>
   <select id="model-select">
     <option value="google/imagen-4-fast">Google Imagen 4 Fast</option>
     <option value="google/nano-banana">Google Nano Banana</option>
     <option value="bytedance/seedream-4">Bytedance Seedream 4</option>
   </select>
+  <p id="model-info"></p>
 
-  <p id="model-info" style="font-size:14px; color:gray; margin-top:4px;">
-  1장당 약 $0.02 (한화 28.9원) / 빠른 속도, 보통 화질
-</p>
+  <label for="ratio-select">비율 선택:</label>
+  <select id="ratio-select"></select>
+  <p id="ratio-info"></p>
 
-
-<label for="ratio-select">비율 선택:</label>
-<select id="ratio-select">
-  <option value="4:3">4:3</option>
-  <option value="1:1">1:1</option>
-  <option value="16:9">16:9</option>
-</select>
-<p id="ratio-info" style="font-size:13px; color:gray; margin-top:4px;">
-  선택한 모델에 따라 가능한 비율이 자동으로 바뀝니다.
-</p>
-
-
-  <br><br>
-
-  <textarea id="prompt-input" rows="4" cols="50" placeholder="생성할 이미지의 프롬프트를 입력하세요... (예: a red car)"></textarea>
-  
-  <br>
-  <button id="generate-button">이미지 생성하기</button>
   <hr>
 
+  <textarea id="prompt-input" rows="4" cols="50" placeholder="이미지 프롬프트를 입력하세요..."></textarea>
+
+  <label for="format-select">출력 포맷:</label>
+  <select id="format-select">
+    <option value="jpg">JPG</option>
+    <option value="png">PNG</option>
+    <option value="webp">WEBP</option>
+  </select>
+
+  <label for="image-count">생성 개수:</label>
+  <select id="image-count">
+    <option value="1">1장</option>
+    <option value="2">2장</option>
+    <option value="3">3장</option>
+    <option value="4">4장</option>
+    <option value="5">5장</option>
+  </select>
+  <p id="count-info" style="font-size:0.9em; color:gray;"></p>
+
+  <hr>
+
+  <div id="image-upload-section">
+    <h3>📸 이미지 추가 (결과 이미지 또는 새로운 이미지)</h3>
+    <input type="file" id="image-upload" accept="image/*" multiple>
+    <p id="image-limit-text" style="font-size:0.9em; color:gray;"></p>
+  </div>
+
+  <div id="add-to-input-container">
+    <label>
+      <input type="checkbox" id="add-to-input-toggle">
+      이 이미지를 다음 생성 입력에 포함하기
+    </label>
+  </div>
+
+  <hr>
+
+  <button id="generate-button">이미지 생성하기</button>
+  <button id="download-button" disabled>이미지 다운로드</button>
+
   <h2>결과 이미지</h2>
-  <img id="result-image" src="" alt="생성된 이미지가 여기에 표시됩니다." width="512">
+  <div id="result-container"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="script.js" defer></script>
-
-</body>
-</html>
-
--->
-
-<!-- Start Code
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTE AI API Tool</title>
-    </head>
-<body>
-
-    <h1>준영님만 믿겠습니다!!</h1>
-
-    <textarea id="prompt-input" rows="4" cols="50" placeholder="생성할 이미지의 프롬프트를 입력하세요... (예: a red car)"></textarea>
-    
-    <br>
-
-    <button id="generate-button">이미지 생성하기</button>
-
-    <hr>
-
-    <h2>결과 이미지</h2>
-
-    <img id="result-image" src="" alt="생성된 이미지가 여기에 표시됩니다." width="512">
-
-    <script src="script.js" defer></script>
-
 </body>
 </html>
 -->
