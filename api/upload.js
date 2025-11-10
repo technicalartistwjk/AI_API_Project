@@ -21,11 +21,13 @@ export default async function handler(req, res) {
     }
 
     // 1️⃣ signed URL 요청
-    const endpoint = "https://api.replicate.com/v1/files";
+    const endpoint = "https://api.replicate.com/v1/uploads";
     const bodyJson = JSON.stringify({
       file_name: fileName,
       content_type: contentType
     });
+
+    //const createRes = await fetch("https://api.replicate.com/v1/uploads", {
 
     const createRes = await fetch(endpoint, {
       method: "POST",
