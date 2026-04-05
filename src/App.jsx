@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // 🌟 useRef 추가
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, ChevronDown, X } from 'lucide-react';
+import { Copy, ChevronDown, X, Volume2, VolumeX } from 'lucide-react'; // 🌟 Volume 아이콘 추가
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCoverflow, Pagination } from 'swiper/modules';
 
@@ -9,7 +9,7 @@ import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
 
-// 사진 임포트
+// 미디어 임포트 (src/assets 폴더 기준)
 import mainImage from './assets/main.jpg';
 import sub0 from './assets/sub0.jpg';
 import sub0Full from './assets/sub0_full.jpg';
@@ -19,6 +19,7 @@ import sub2 from './assets/sub2.jpg';
 import sub2Full from './assets/sub2_full.jpg';
 import sub3 from './assets/sub3.jpg';
 import sub3Full from './assets/sub3_full.jpg';
+import bgmFile from './assets/bgm.mp3'; // 🌟 배경음악 파일 추가
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -41,6 +42,20 @@ function App() {
   const [openSection, setOpenSection] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [dDay, setDDay] = useState('');
+  
+  // 🌟 음악 재생 상태와 오디오 참조 객체
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
+
+  // 🌟 음악 재생/정지 토글 함수
+  const togglePlay = () => {
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
 
   useEffect(() => {
     const calculateDDay = () => {
@@ -93,6 +108,18 @@ function App() {
   return (
     <div className="max-w-[480px] mx-auto bg-white min-h-screen shadow-2xl font-serif text-gray-800 overflow-hidden relative">
       
+      {/* 🌟 보이지 않는 오디오 태그 (반복 재생 설정) */}
+      <audio ref={audioRef} src={bgmFile} loop />
+
+      {/* 🌟 플로팅 음악 재생 버튼 */}
+      <button 
+        onClick={togglePlay}
+        className="fixed bottom-8 right-6 z-[90] p-3.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-gray-600 transition-transform active:scale-90"
+        aria-label="Toggle Music"
+      >
+        {isPlaying ? <Volume2 size={20} className="animate-pulse text-rose-400" /> : <VolumeX size={20} />}
+      </button>
+
       {/* 1. 메인 히어로 */}
       <section className="relative h-[100dvh] flex flex-col items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${mainImage})` }} />
@@ -111,7 +138,7 @@ function App() {
       {/* 2. D-day */}
       <section className="py-20 px-6 bg-white">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
-          <p className="text-gray-400 mb-6 text-[10px] font-medium tracking-[0.3em] uppercase">Days until our wedding day</p>
+          <p className="text-gray-400 mb-6 text-[10px] font-medium tracking-[0.3em] uppercase">Count down</p>
           <div className="flex justify-center items-end gap-2 font-eng">
             <span className="text-5xl font-bold text-gray-900 tabular-nums tracking-tighter">D-{dDay}</span>
           </div>
@@ -136,7 +163,7 @@ function App() {
 
       <hr className="w-8 mx-auto border-gray-200" />
 
-      {/* 🌟 4. 갤러리 (양옆 어두워지는 효과 적용) */}
+      {/* 4. 갤러리 */}
       <section className="py-28 bg-white">
         <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-eng text-center text-xs tracking-[0.4em] mb-16 text-gray-400 uppercase">Gallery</motion.p>
         <Swiper
@@ -144,7 +171,6 @@ function App() {
           grabCursor={true}
           centeredSlides={true}
           slidesPerView={'auto'}
-          // stretch와 depth를 조절하여 이미지가 겹치는 느낌을 강화했습니다.
           coverflowEffect={{ rotate: 0, stretch: 50, depth: 150, modifier: 1, slideShadows: false }}
           pagination={{ clickable: true }}
           modules={[EffectCoverflow, Pagination]}
@@ -152,12 +178,9 @@ function App() {
         >
           {galleryData.map((img, index) => (
             <SwiperSlide key={index} className="w-[300px] aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden shadow-md relative">
-              {/* isActive를 활용해 활성화된 슬라이드와 아닌 슬라이드를 구분합니다 */}
               {({ isActive }) => (
                 <div className="w-full h-full relative cursor-pointer" onClick={() => setSelectedIndex(index)}>
                   <img src={img.thumb} loading="lazy" alt="wedding" className="w-full h-full object-cover" />
-                  
-                  {/* 중앙에 있지 않은 슬라이드에 어두운 오버레이 깔기 */}
                   <div 
                     className={`absolute inset-0 bg-black/40 transition-opacity duration-500 pointer-events-none ${
                       isActive ? 'opacity-0' : 'opacity-100'
@@ -172,7 +195,7 @@ function App() {
 
       <hr className="w-8 mx-auto border-gray-200" />
 
-      {/* 🌟 5. 오시는 길 (지도 버튼 가로 정렬) */}
+      {/* 5. 오시는 길 */}
       <section className="py-32 px-6 bg-white">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
           <p className="font-eng text-xs tracking-[0.4em] mb-12 text-gray-400 uppercase">Location</p>
@@ -189,7 +212,6 @@ function App() {
             </div>
           </div>
           
-          {/* 가로 정렬(flex-row)로 변경된 버튼 영역 */}
           <div className="flex justify-center gap-2 max-w-[320px] mx-auto">
             {['네이버 지도', '카카오맵', '티맵'].map((map) => (
               <a 
