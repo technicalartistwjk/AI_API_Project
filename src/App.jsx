@@ -111,7 +111,7 @@ function App() {
       {/* 2. D-day */}
       <section className="py-20 px-6 bg-white">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
-          <p className="text-gray-400 mb-6 text-[10px] font-medium tracking-[0.3em] uppercase">Count down</p>
+          <p className="text-gray-400 mb-6 text-[10px] font-medium tracking-[0.3em] uppercase">Days until our wedding day</p>
           <div className="flex justify-center items-end gap-2 font-eng">
             <span className="text-5xl font-bold text-gray-900 tabular-nums tracking-tighter">D-{dDay}</span>
           </div>
