@@ -21,13 +21,12 @@ import sub3 from './assets/sub3.jpg';
 import sub3Full from './assets/sub3_full.jpg';
 import bgmFile from './assets/bgm.mp3';
 
-// 🌟 최적화: transform 애니메이션 간소화 및 ease 커브 단순화
 const fadeUp = {
-  hidden: { opacity: 0, y: 15 }, // 이동 거리 축소로 렌더링 부담 감소
+  hidden: { opacity: 0, y: 15 },
   visible: { 
     opacity: 1, 
     y: 0, 
-    transition: { duration: 0.6, ease: "easeOut" } // 복잡한 베지어 곡선 대신 내장 ease 사용
+    transition: { duration: 0.6, ease: "easeOut" } 
   }
 };
 
@@ -49,6 +48,15 @@ function App() {
 
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [contactSection, setContactSection] = useState(null);
+
+  // 🌟 카카오톡 덜컥거림 방지: 초기 화면 높이 고정용 상태
+  const [heroHeight, setHeroHeight] = useState('100vh');
+
+  useEffect(() => {
+    // 🌟 처음에 화면이 로드될 때의 정확한 픽셀 높이를 구해서 고정시켜버립니다.
+    // 이렇게 하면 카톡 상하단 바가 나타나거나 사라져도 화면이 요동치지 않습니다.
+    setHeroHeight(`${window.innerHeight}px`);
+  }, []);
 
   useEffect(() => {
     const playAudio = async () => {
@@ -157,12 +165,10 @@ function App() {
   };
 
   return (
-    // 🌟 최적화: 최상단 컨테이너 그림자 제거 (모바일에서 불필요한 연산)
     <div className="max-w-[480px] mx-auto bg-white min-h-screen font-serif text-gray-800 overflow-hidden relative">
       
       <audio ref={audioRef} src={bgmFile} loop autoPlay />
 
-      {/* 🌟 최적화: backdrop-blur 및 무거운 shadow 제거 */}
       <button 
         onClick={togglePlay}
         className="fixed bottom-8 right-6 z-[90] p-3.5 bg-white/95 rounded-full shadow-lg border border-gray-100 text-gray-600 transition-transform active:scale-90"
@@ -172,9 +178,11 @@ function App() {
         {isPlaying ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
-      {/* 1. 메인 히어로 */}
-      <section className="relative h-[100dvh] flex flex-col items-center justify-center overflow-hidden">
-        {/* 🌟 최적화: 배경 이미지 렌더링 힌트 제공 */}
+      {/* 🌟 1. 메인 히어로 (height를 h-[100dvh]에서 style={{ height: heroHeight }}로 변경하여 고정시킴) */}
+      <section 
+        className="relative flex flex-col items-center justify-center overflow-hidden"
+        style={{ height: heroHeight }}
+      >
         <div 
           className="absolute inset-0 bg-cover bg-center" 
           style={{ backgroundImage: `url(${mainImage})`, willChange: 'transform' }} 
@@ -183,7 +191,7 @@ function App() {
         <motion.div 
           className="relative z-10 text-center text-white mt-auto mb-24 px-4"
           initial="hidden" animate="visible" variants={staggerContainer}
-          style={{ willChange: 'opacity, transform' }} // 🌟 하드웨어 가속
+          style={{ willChange: 'opacity, transform' }}
         >
           <motion.p variants={fadeUp} className="font-eng text-[11px] tracking-[0.5em] mb-8 text-white/90 uppercase text-center">
             The Wedding Day
@@ -297,7 +305,6 @@ function App() {
           Gallery
         </motion.p>
         
-        {/* 🌟 최적화: Swiper 렌더링 성능 향상을 위한 옵션 조정 */}
         <Swiper
           effect={'coverflow'}
           grabCursor={true}
@@ -307,7 +314,7 @@ function App() {
           pagination={{ clickable: true }}
           modules={[EffectCoverflow, Pagination]}
           className="pb-12"
-          watchSlidesProgress={true} // 스크롤 시 안 보이는 슬라이드 연산 줄임
+          watchSlidesProgress={true}
         >
           {galleryData.map((img, index) => (
             <SwiperSlide key={index} className="w-[300px] aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden shadow-sm relative">
@@ -318,7 +325,7 @@ function App() {
                     className={`absolute inset-0 bg-black/40 transition-opacity duration-300 pointer-events-none ${
                       isActive ? 'opacity-0' : 'opacity-100'
                     }`} 
-                    style={{ willChange: 'opacity' }} // 🌟 최적화
+                    style={{ willChange: 'opacity' }}
                   />
                 </div>
               )}
@@ -429,7 +436,7 @@ function App() {
         {isContactModalOpen && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4" // 🌟 최적화: blur 제거
+            className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4"
           >
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 10 }} 
@@ -493,8 +500,8 @@ function App() {
               initial={{ scale: 0.95, opacity: 0 }} 
               animate={{ scale: 1, opacity: 1 }} 
               exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }} // 🌟 최적화: 속도 상향
-              className="max-w-full max-h-[85dvh] object-contain" // 🌟 최적화: shadow 제거
+              transition={{ duration: 0.2 }}
+              className="max-w-full max-h-[85dvh] object-contain"
             />
           </motion.div>
         )}
