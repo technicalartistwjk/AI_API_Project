@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, ChevronDown, X } from 'lucide-react';
-
-// 🌟 Swiper 관련 컴포넌트 및 스타일 임포트
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCoverflow, Pagination } from 'swiper/modules';
 import 'swiper/css';
@@ -33,20 +31,20 @@ function App() {
     "https://images.unsplash.com/photo-1583939000340-690624197171?auto=format&fit=crop&q=80&w=600",
     "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&q=80&w=600",
     "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=600",
-    "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=600"
+    "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800"
   ];
 
   return (
     <div className="max-w-[480px] mx-auto bg-white min-h-screen shadow-2xl font-serif text-gray-800 overflow-hidden relative">
       
-      {/* 1. 메인 뷰 */}
+      {/* 1. 메인 히어로 */}
       <section className="relative h-[90vh] flex flex-col items-center justify-center overflow-hidden">
         <motion.div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800')] bg-cover bg-center" animate={{ scale: [1, 1.15] }} transition={{ duration: 20, repeat: Infinity, repeatType: "reverse" }} />
         <div className="absolute inset-0 bg-black/30" />
         <motion.div className="relative z-10 text-center text-white mt-auto mb-24" initial="hidden" animate="visible" variants={staggerContainer}>
           <motion.p variants={fadeUp} className="font-eng text-sm tracking-[0.3em] mb-4 text-white/90">THE WEDDING DAY</motion.p>
-          <motion.h1 variants={fadeUp} className="font-eng text-5xl mb-6 font-semibold drop-shadow-lg">Chulsoo & Younghee</motion.h1>
-          <motion.p variants={fadeUp} className="text-lg font-light tracking-widest">2026. 10. 24. SAT 13:00</motion.p>
+          <motion.h1 variants={fadeUp} className="font-eng text-5xl mb-6 font-semibold drop-shadow-lg text-white">Woojinkyu & Leejiyoung</motion.h1>
+          <motion.p variants={fadeUp} className="text-lg font-light tracking-widest text-white">2026. 05. 16. SAT 18:30</motion.p>
         </motion.div>
       </section>
 
@@ -55,41 +53,33 @@ function App() {
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeUp}>
           <p className="font-eng text-xs tracking-widest text-[#a8a29e] mb-10">INVITATION</p>
           <h3 className="text-xl font-bold mb-10 text-gray-800">초대합니다</h3>
-          <p className="text-gray-600 leading-[2.4] text-[15px] font-light">서로가 마주 보며 다져온 사랑을<br />이제 함께 한 곳을 바라보며<br />걸어갈 수 있는 큰 사랑으로 키우고자 합니다.<br /><br />저희 두 사람이 믿음과 사랑으로<br />한 가정을 이루는 뜻깊은 자리에<br />소중한 분들을 모시고자 합니다.</p>
+          <p className="text-gray-600 leading-[2.4] text-[15px] font-light">
+            서로가 마주 보며 다져온 사랑을<br />이제 함께 한 곳을 바라보며<br />걸어갈 수 있는 큰 사랑으로 키우고자 합니다.<br /><br />
+            저희 두 사람이 믿음과 사랑으로<br />한 가정을 이루는 뜻깊은 자리에<br />소중한 분들을 모시고자 합니다.
+          </p>
         </motion.div>
       </section>
 
-      {/* 🌟 3. Swiper 입체 갤러리 (레퍼런스 스타일 적용) */}
+      {/* 3. 스와이프 갤러리 */}
       <section className="py-24 bg-white overflow-hidden">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
           <motion.p variants={fadeUp} className="font-eng text-center text-xl tracking-widest text-gray-800 mb-2">GALLERY</motion.p>
           <motion.p variants={fadeUp} className="text-center text-xs text-gray-400 mb-8">좌우로 밀어서 사진을 확인해 보세요</motion.p>
           
-          <div className="px-4" data-aos="fade-up">
+          <div className="px-4">
             <Swiper
               effect={'coverflow'}
               grabCursor={true}
               centeredSlides={true}
               slidesPerView={'auto'}
-              coverflowEffect={{
-                rotate: 20,    // 회전 각도
-                stretch: 0,     // 슬라이드 간 간격
-                depth: 100,     // 입체 깊이
-                modifier: 1,    // 효과 강도
-                slideShadows: true, // 그림자 효과
-              }}
+              coverflowEffect={{ rotate: 20, stretch: 0, depth: 100, modifier: 1, slideShadows: true }}
               pagination={true}
               modules={[EffectCoverflow, Pagination]}
               className="w-full py-10"
             >
               {galleryImages.map((src, index) => (
                 <SwiperSlide key={index} className="w-[280px] h-[380px] bg-gray-100 rounded-xl overflow-hidden shadow-lg">
-                  <img 
-                    src={src} 
-                    alt={`wedding-${index}`} 
-                    className="w-full h-full object-cover cursor-pointer"
-                    onClick={() => setSelectedImage(src)} 
-                  />
+                  <img src={src} alt="wedding" className="w-full h-full object-cover cursor-pointer" onClick={() => setSelectedImage(src)} />
                 </SwiperSlide>
               ))}
             </Swiper>
@@ -101,17 +91,18 @@ function App() {
       <section className="py-24 px-6 bg-[#fafaf9]">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
           <p className="font-eng text-xl tracking-widest text-gray-800 mb-8">LOCATION</p>
-          <p className="text-lg font-bold text-gray-800 mb-2">서울 팰리스 호텔 그랜드볼룸</p>
-          <p className="text-sm text-gray-500 mb-10">서울 강남구 테헤란로 123</p>
+          <p className="text-lg font-bold text-gray-800 mb-2">서울대학교 연구공원 웨딩홀</p>
+          <p className="text-sm text-gray-500 mb-10 text-center">서울특별시 관악구 낙성대로 38<br/>(낙성대동 1622-4)</p>
+          
           <div className="grid grid-cols-3 gap-4">
-            <a href="https://map.naver.com/v5/search/서울 팰리스 호텔" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 uppercase text-[10px] font-bold text-gray-500">
-                <span className="text-[#03C75A] text-lg mb-1">N</span>네이버
+            <a href="https://map.naver.com/v5/search/서울대학교연구공원웨딩홀" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-[10px] font-bold text-gray-500">
+                <span className="text-[#03C75A] text-lg mb-1 font-black">N</span>네이버
             </a>
-            <a href="https://map.kakao.com/link/search/서울 팰리스 호텔" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 uppercase text-[10px] font-bold text-gray-500">
-                <span className="text-[#FEE500] text-lg mb-1">K</span>카카오
+            <a href="https://map.kakao.com/link/search/서울대학교연구공원웨딩홀" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-[10px] font-bold text-gray-500">
+                <span className="text-[#FEE500] text-lg mb-1 font-black">K</span>카카오
             </a>
-            <a href="tmap://search?name=서울 팰리스 호텔" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 uppercase text-[10px] font-bold text-gray-500">
-                <span className="text-black text-lg mb-1">T</span>티맵
+            <a href="tmap://search?name=서울대학교연구공원웨딩홀" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-[10px] font-bold text-gray-500">
+                <span className="text-black text-lg mb-1 font-black">T</span>티맵
             </a>
           </div>
         </motion.div>
@@ -130,7 +121,7 @@ function App() {
               {openAccount === 'groom' && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-6 pb-5">
                   <div className="pt-4 border-t border-gray-200 flex justify-between items-center">
-                    <div><p className="text-xs text-gray-500 mb-1">국민은행</p><p className="text-sm font-medium">123-456-7890 <span className="text-xs text-gray-400 ml-1">김철수</span></p></div>
+                    <div><p className="text-xs text-gray-500 mb-1">국민은행</p><p className="text-sm font-medium">123-456-7890 <span className="text-xs text-gray-400 ml-1">우진규</span></p></div>
                     <button onClick={() => copyToClipboard('1234567890')} className="p-2 bg-white rounded-full shadow-sm border border-gray-200 text-gray-600"><Copy size={16} /></button>
                   </div>
                 </motion.div>
@@ -146,7 +137,7 @@ function App() {
               {openAccount === 'bride' && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-6 pb-5">
                   <div className="pt-4 border-t border-gray-200 flex justify-between items-center">
-                    <div><p className="text-xs text-gray-500 mb-1">신한은행</p><p className="text-sm font-medium">098-765-4321 <span className="text-xs text-gray-400 ml-1">이영희</span></p></div>
+                    <div><p className="text-xs text-gray-500 mb-1">신한은행</p><p className="text-sm font-medium">098-765-4321 <span className="text-xs text-gray-400 ml-1">이지영</span></p></div>
                     <button onClick={() => copyToClipboard('0987654321')} className="p-2 bg-white rounded-full shadow-sm border border-gray-200 text-gray-600"><Copy size={16} /></button>
                   </div>
                 </motion.div>
@@ -156,17 +147,17 @@ function App() {
         </motion.div>
       </section>
 
+      {/* 🌟 푸터: 카피라이트 제거 버전 */}
       <footer className="bg-[#1c1917] text-gray-400 text-center py-16 px-6 font-eng relative">
-        <p className="mb-2 text-sm tracking-widest text-white/80">CHULSOO & YOUNGHEE</p>
-        <p className="opacity-40 text-xs">© 2026. All rights reserved.</p>
+        <p className="text-sm tracking-widest text-white/80 uppercase">Woojinkyu & Leejiyoung</p>
       </footer>
 
-      {/* 6. 모달 */}
+      {/* 모달 */}
       <AnimatePresence>
         {selectedImage && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedImage(null)} className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-pointer">
             <button className="absolute top-6 right-6 p-2 bg-white/10 rounded-full text-white"><X size={24} /></button>
-            <motion.img src={selectedImage} initial={{ scale: 0.8 }} animate={{ scale: 1 }} exit={{ scale: 0.8 }} className="max-w-full max-h-[85vh] object-contain rounded-lg" />
+            <motion.img src={selectedImage} initial={{ scale: 0.8 }} animate={{ scale: 1 }} exit={{ scale: 0.8 }} className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" />
           </motion.div>
         )}
       </AnimatePresence>
