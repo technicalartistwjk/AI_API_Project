@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Share2, ChevronDown } from 'lucide-react';
+// 🌟 X 아이콘(닫기 버튼)이 추가되었습니다
+import { Copy, ChevronDown, X } from 'lucide-react';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -14,35 +15,26 @@ const staggerContainer = {
 
 function App() {
   const [openAccount, setOpenAccount] = useState(null);
+  
+  // 🌟 선택된 이미지를 기억하는 State (모달 띄우기 용도)
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const copyToClipboard = (text, message = '계좌번호가 복사되었습니다.') => {
     navigator.clipboard.writeText(text);
     alert(message);
   };
 
-  const handleNativeShare = async () => {
-    const shareData = {
-      title: '김철수 & 이영희 결혼합니다',
-      text: '2026년 10월 24일 토요일 오후 1시\n서울 팰리스 호텔',
-      url: window.location.href
-    };
-    if (navigator.share) {
-      try { await navigator.share(shareData); } catch (err) { console.log('공유 취소'); }
-    } else {
-      copyToClipboard(window.location.href, '청첩장 주소가 복사되었습니다.');
-    }
-  };
-
   const galleryImages = [
-    "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=400",
-    "https://images.unsplash.com/photo-1583939000340-690624197171?auto=format&fit=crop&q=80&w=400",
-    "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&q=80&w=400",
-    "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=400"
+    "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=600",
+    "https://images.unsplash.com/photo-1583939000340-690624197171?auto=format&fit=crop&q=80&w=600",
+    "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&q=80&w=600",
+    "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=600"
   ];
 
   return (
-    <div className="max-w-[480px] mx-auto bg-white min-h-screen shadow-2xl font-serif text-gray-800 overflow-hidden relative pb-20">
+    <div className="max-w-[480px] mx-auto bg-white min-h-screen shadow-2xl font-serif text-gray-800 overflow-hidden relative">
       
+      {/* 1. 메인 뷰 */}
       <section className="relative h-[90vh] flex flex-col items-center justify-center overflow-hidden">
         <motion.div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800')] bg-cover bg-center" animate={{ scale: [1, 1.15] }} transition={{ duration: 20, repeat: Infinity, repeatType: "reverse" }} />
         <div className="absolute inset-0 bg-black/30" />
@@ -53,6 +45,7 @@ function App() {
         </motion.div>
       </section>
 
+      {/* 2. 초대글 */}
       <section className="py-32 px-8 text-center bg-[#fafaf9]">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeUp}>
           <p className="font-eng text-xs tracking-widest text-[#a8a29e] mb-10">INVITATION</p>
@@ -60,19 +53,30 @@ function App() {
         </motion.div>
       </section>
 
-      <section className="py-24 px-6 bg-white">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="text-center">
-          <motion.p variants={fadeUp} className="font-eng text-xl tracking-widest text-gray-800 mb-12">GALLERY</motion.p>
-          <div className="grid grid-cols-2 gap-3">
+      {/* 🌟 3. 가로 스와이프 갤러리 */}
+      <section className="py-24 bg-white overflow-hidden">
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
+          <motion.p variants={fadeUp} className="font-eng text-center text-xl tracking-widest text-gray-800 mb-2">GALLERY</motion.p>
+          <motion.p variants={fadeUp} className="text-center text-xs text-gray-400 mb-10">사진을 터치하면 크게 볼 수 있습니다</motion.p>
+          
+          {/* 가로 스크롤 영역 */}
+          <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-6 pb-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {galleryImages.map((src, index) => (
-              <motion.div key={index} variants={fadeUp} whileHover={{ scale: 0.98 }} className="aspect-[3/4] bg-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <img src={src} alt="wedding" className="w-full h-full object-cover" />
+              <motion.div 
+                key={index} 
+                variants={fadeUp} 
+                whileHover={{ scale: 0.98 }} 
+                onClick={() => setSelectedImage(src)} // 클릭 시 모달 열기
+                className="min-w-[75%] shrink-0 snap-center aspect-[3/4] bg-gray-200 rounded-xl overflow-hidden shadow-md cursor-pointer relative"
+              >
+                <img src={src} alt={`wedding-${index}`} className="w-full h-full object-cover pointer-events-none" />
               </motion.div>
             ))}
           </div>
         </motion.div>
       </section>
 
+      {/* 4. 오시는 길 */}
       <section className="py-24 px-6 bg-[#fafaf9]">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
           <p className="font-eng text-xl tracking-widest text-gray-800 mb-8">LOCATION</p>
@@ -95,6 +99,7 @@ function App() {
         </motion.div>
       </section>
 
+      {/* 5. 마음 전하실 곳 */}
       <section className="py-24 px-6 bg-white">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
           <p className="font-eng text-center text-xl tracking-widest text-gray-800 mb-10">MIND</p>
@@ -133,11 +138,42 @@ function App() {
         </motion.div>
       </section>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] p-4 bg-gradient-to-t from-white via-white/90 to-transparent z-50">
-        <button onClick={handleNativeShare} className="w-full py-4 bg-gray-800 text-white font-semibold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-gray-700 transition">
-          <Share2 size={18} /> 초대장 링크 공유하기
-        </button>
-      </div>
+      <footer className="bg-[#1c1917] text-gray-400 text-center py-16 px-6 font-eng relative">
+        <p className="mb-2 text-sm tracking-widest text-white/80">CHULSOO & YOUNGHEE</p>
+        <p className="opacity-40 text-xs">© 2026. All rights reserved.</p>
+      </footer>
+
+      {/* 🌟 6. 이미지 크게 보기 모달 (팝업) */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            onClick={() => setSelectedImage(null)} // 검은 배경 누르면 닫힘
+            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-pointer"
+          >
+            {/* 닫기 버튼 */}
+            <button 
+              className="absolute top-6 right-6 p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition"
+              onClick={() => setSelectedImage(null)}
+            >
+              <X size={24} />
+            </button>
+            
+            {/* 확대된 이미지 */}
+            <motion.img 
+              src={selectedImage} 
+              initial={{ scale: 0.8 }} 
+              animate={{ scale: 1 }} 
+              exit={{ scale: 0.8 }} 
+              transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()} // 사진을 눌렀을 때는 안 닫히게 방지
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
