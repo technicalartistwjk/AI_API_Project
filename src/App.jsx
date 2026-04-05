@@ -7,6 +7,14 @@ import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
 
+// 🌟 [중요] src/assets 폴더 안의 로컬 이미지를 불러옵니다.
+// 확장자가 .jpg가 아니라 .png나 .webp라면 아래 경로를 수정해주세요!
+import mainImage from './assets/main.jpg';
+import sub0 from './assets/sub0.jpg';
+import sub1 from './assets/sub1.jpg';
+import sub2 from './assets/sub2.jpg';
+import sub3 from './assets/sub3.jpg';
+
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
@@ -26,20 +34,21 @@ function App() {
     alert(message);
   };
 
-  const galleryImages = [
-    "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=600",
-    "https://images.unsplash.com/photo-1583939000340-690624197171?auto=format&fit=crop&q=80&w=600",
-    "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&q=80&w=600",
-    "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=600",
-    "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800"
-  ];
+  // 🌟 불러온 갤러리 이미지들을 배열로 만듭니다. (순서대로 1~4번)
+  const galleryImages = [sub0, sub1, sub2, sub3];
 
   return (
     <div className="max-w-[480px] mx-auto bg-white min-h-screen shadow-2xl font-serif text-gray-800 overflow-hidden relative">
       
       {/* 1. 메인 히어로 */}
       <section className="relative h-[90vh] flex flex-col items-center justify-center overflow-hidden">
-        <motion.div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800')] bg-cover bg-center" animate={{ scale: [1, 1.15] }} transition={{ duration: 20, repeat: Infinity, repeatType: "reverse" }} />
+        {/* 🌟 Tailwind의 bg-[url()] 대신 inline style로 불러온 이미지를 적용합니다. */}
+        <motion.div 
+          className="absolute inset-0 bg-cover bg-center" 
+          style={{ backgroundImage: `url(${mainImage})` }}
+          animate={{ scale: [1, 1.15] }} 
+          transition={{ duration: 20, repeat: Infinity, repeatType: "reverse" }} 
+        />
         <div className="absolute inset-0 bg-black/30" />
         <motion.div className="relative z-10 text-center text-white mt-auto mb-24" initial="hidden" animate="visible" variants={staggerContainer}>
           <motion.p variants={fadeUp} className="font-eng text-sm tracking-[0.3em] mb-4 text-white/90">THE WEDDING DAY</motion.p>
@@ -79,7 +88,8 @@ function App() {
             >
               {galleryImages.map((src, index) => (
                 <SwiperSlide key={index} className="w-[280px] h-[380px] bg-gray-100 rounded-xl overflow-hidden shadow-lg">
-                  <img src={src} alt="wedding" className="w-full h-full object-cover cursor-pointer" onClick={() => setSelectedImage(src)} />
+                  {/* 🌟 로컬 이미지가 적용됩니다. */}
+                  <img src={src} alt={`wedding-${index}`} className="w-full h-full object-cover cursor-pointer" onClick={() => setSelectedImage(src)} />
                 </SwiperSlide>
               ))}
             </Swiper>
@@ -147,7 +157,7 @@ function App() {
         </motion.div>
       </section>
 
-      {/* 🌟 푸터: 카피라이트 제거 버전 */}
+      {/* 푸터 */}
       <footer className="bg-[#1c1917] text-gray-400 text-center py-16 px-6 font-eng relative">
         <p className="text-sm tracking-widest text-white/80 uppercase">Woojinkyu & Leejiyoung</p>
       </footer>
@@ -157,6 +167,7 @@ function App() {
         {selectedImage && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedImage(null)} className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-pointer">
             <button className="absolute top-6 right-6 p-2 bg-white/10 rounded-full text-white"><X size={24} /></button>
+            {/* 🌟 모달에서도 로컬 이미지가 크게 보입니다. */}
             <motion.img src={selectedImage} initial={{ scale: 0.8 }} animate={{ scale: 1 }} exit={{ scale: 0.8 }} className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" />
           </motion.div>
         )}
