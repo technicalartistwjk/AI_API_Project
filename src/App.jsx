@@ -136,7 +136,7 @@ function App() {
 
       <hr className="w-8 mx-auto border-gray-200" />
 
-      {/* 4. 갤러리 */}
+      {/* 🌟 4. 갤러리 (양옆 어두워지는 효과 적용) */}
       <section className="py-28 bg-white">
         <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-eng text-center text-xs tracking-[0.4em] mb-16 text-gray-400 uppercase">Gallery</motion.p>
         <Swiper
@@ -144,14 +144,27 @@ function App() {
           grabCursor={true}
           centeredSlides={true}
           slidesPerView={'auto'}
-          coverflowEffect={{ rotate: 0, stretch: 10, depth: 100, modifier: 1, slideShadows: false }}
+          // stretch와 depth를 조절하여 이미지가 겹치는 느낌을 강화했습니다.
+          coverflowEffect={{ rotate: 0, stretch: 50, depth: 150, modifier: 1, slideShadows: false }}
           pagination={{ clickable: true }}
           modules={[EffectCoverflow, Pagination]}
           className="pb-12"
         >
           {galleryData.map((img, index) => (
-            <SwiperSlide key={index} className="w-[300px] aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden shadow-sm">
-              <img src={img.thumb} loading="lazy" alt="wedding" className="w-full h-full object-cover cursor-pointer" onClick={() => setSelectedIndex(index)} />
+            <SwiperSlide key={index} className="w-[300px] aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden shadow-md relative">
+              {/* isActive를 활용해 활성화된 슬라이드와 아닌 슬라이드를 구분합니다 */}
+              {({ isActive }) => (
+                <div className="w-full h-full relative cursor-pointer" onClick={() => setSelectedIndex(index)}>
+                  <img src={img.thumb} loading="lazy" alt="wedding" className="w-full h-full object-cover" />
+                  
+                  {/* 중앙에 있지 않은 슬라이드에 어두운 오버레이 깔기 */}
+                  <div 
+                    className={`absolute inset-0 bg-black/40 transition-opacity duration-500 pointer-events-none ${
+                      isActive ? 'opacity-0' : 'opacity-100'
+                    }`} 
+                  />
+                </div>
+              )}
             </SwiperSlide>
           ))}
         </Swiper>
@@ -159,18 +172,16 @@ function App() {
 
       <hr className="w-8 mx-auto border-gray-200" />
 
-      {/* 5. 오시는 길 (예식 일시 및 주차 안내 추가) */}
+      {/* 🌟 5. 오시는 길 (지도 버튼 가로 정렬) */}
       <section className="py-32 px-6 bg-white">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
           <p className="font-eng text-xs tracking-[0.4em] mb-12 text-gray-400 uppercase">Location</p>
           <p className="text-lg font-bold text-gray-900 mb-4 tracking-tight">서울대학교 연구공원 웨딩홀</p>
           
-          <div className="text-[13px] text-gray-500 mb-12 leading-relaxed break-keep">
+          <div className="text-[13px] text-gray-500 mb-10 leading-relaxed break-keep">
             <p className="mb-1">서울특별시 관악구 낙성대로 38</p>
-            {/* 예식 일시 추가 */}
             <p className="font-medium text-gray-800">2026년 5월 16일 토요일 오후 6시 30분</p>
             
-            {/* 주차 안내 추가 */}
             <div className="mt-8 pt-8 border-t border-gray-50 max-w-[240px] mx-auto text-gray-400 text-[12px]">
               <p className="font-bold text-gray-500 mb-2 underline underline-offset-4">주차 안내</p>
               <p>연구공원 단지 내 전용 주차장 이용 가능</p>
@@ -178,13 +189,14 @@ function App() {
             </div>
           </div>
           
-          <div className="flex flex-col gap-2 max-w-[280px] mx-auto">
+          {/* 가로 정렬(flex-row)로 변경된 버튼 영역 */}
+          <div className="flex justify-center gap-2 max-w-[320px] mx-auto">
             {['네이버 지도', '카카오맵', '티맵'].map((map) => (
               <a 
                 key={map}
                 href={map.includes('네이버') ? "https://map.naver.com/v5/search/서울대학교연구공원웨딩홀" : map.includes('카카오') ? "https://map.kakao.com/link/search/서울대학교연구공원웨딩홀" : "tmap://search?name=서울대학교연구공원웨딩홀"} 
                 target="_blank" rel="noreferrer" 
-                className="py-4 border border-gray-100 rounded-md text-[11px] font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+                className="flex-1 py-3.5 border border-gray-200 bg-white shadow-sm rounded-md text-[11px] font-bold text-gray-600 hover:bg-gray-50 transition-colors text-center"
               >
                 {map}
               </a>
