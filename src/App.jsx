@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// 🌟 X 아이콘(닫기 버튼)이 추가되었습니다
 import { Copy, ChevronDown, X } from 'lucide-react';
+
+// 🌟 Swiper 관련 컴포넌트 및 스타일 임포트
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { EffectCoverflow, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/effect-coverflow';
+import 'swiper/css/pagination';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -15,8 +21,6 @@ const staggerContainer = {
 
 function App() {
   const [openAccount, setOpenAccount] = useState(null);
-  
-  // 🌟 선택된 이미지를 기억하는 State (모달 띄우기 용도)
   const [selectedImage, setSelectedImage] = useState(null);
 
   const copyToClipboard = (text, message = '계좌번호가 복사되었습니다.') => {
@@ -28,7 +32,8 @@ function App() {
     "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=600",
     "https://images.unsplash.com/photo-1583939000340-690624197171?auto=format&fit=crop&q=80&w=600",
     "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&q=80&w=600",
-    "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=600"
+    "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=600",
+    "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=600"
   ];
 
   return (
@@ -49,29 +54,45 @@ function App() {
       <section className="py-32 px-8 text-center bg-[#fafaf9]">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeUp}>
           <p className="font-eng text-xs tracking-widest text-[#a8a29e] mb-10">INVITATION</p>
+          <h3 className="text-xl font-bold mb-10 text-gray-800">초대합니다</h3>
           <p className="text-gray-600 leading-[2.4] text-[15px] font-light">서로가 마주 보며 다져온 사랑을<br />이제 함께 한 곳을 바라보며<br />걸어갈 수 있는 큰 사랑으로 키우고자 합니다.<br /><br />저희 두 사람이 믿음과 사랑으로<br />한 가정을 이루는 뜻깊은 자리에<br />소중한 분들을 모시고자 합니다.</p>
         </motion.div>
       </section>
 
-      {/* 🌟 3. 가로 스와이프 갤러리 */}
+      {/* 🌟 3. Swiper 입체 갤러리 (레퍼런스 스타일 적용) */}
       <section className="py-24 bg-white overflow-hidden">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
           <motion.p variants={fadeUp} className="font-eng text-center text-xl tracking-widest text-gray-800 mb-2">GALLERY</motion.p>
-          <motion.p variants={fadeUp} className="text-center text-xs text-gray-400 mb-10">사진을 터치하면 크게 볼 수 있습니다</motion.p>
+          <motion.p variants={fadeUp} className="text-center text-xs text-gray-400 mb-8">좌우로 밀어서 사진을 확인해 보세요</motion.p>
           
-          {/* 가로 스크롤 영역 */}
-          <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-6 pb-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {galleryImages.map((src, index) => (
-              <motion.div 
-                key={index} 
-                variants={fadeUp} 
-                whileHover={{ scale: 0.98 }} 
-                onClick={() => setSelectedImage(src)} // 클릭 시 모달 열기
-                className="min-w-[75%] shrink-0 snap-center aspect-[3/4] bg-gray-200 rounded-xl overflow-hidden shadow-md cursor-pointer relative"
-              >
-                <img src={src} alt={`wedding-${index}`} className="w-full h-full object-cover pointer-events-none" />
-              </motion.div>
-            ))}
+          <div className="px-4" data-aos="fade-up">
+            <Swiper
+              effect={'coverflow'}
+              grabCursor={true}
+              centeredSlides={true}
+              slidesPerView={'auto'}
+              coverflowEffect={{
+                rotate: 20,    // 회전 각도
+                stretch: 0,     // 슬라이드 간 간격
+                depth: 100,     // 입체 깊이
+                modifier: 1,    // 효과 강도
+                slideShadows: true, // 그림자 효과
+              }}
+              pagination={true}
+              modules={[EffectCoverflow, Pagination]}
+              className="w-full py-10"
+            >
+              {galleryImages.map((src, index) => (
+                <SwiperSlide key={index} className="w-[280px] h-[380px] bg-gray-100 rounded-xl overflow-hidden shadow-lg">
+                  <img 
+                    src={src} 
+                    alt={`wedding-${index}`} 
+                    className="w-full h-full object-cover cursor-pointer"
+                    onClick={() => setSelectedImage(src)} 
+                  />
+                </SwiperSlide>
+              ))}
+            </Swiper>
           </div>
         </motion.div>
       </section>
@@ -82,18 +103,15 @@ function App() {
           <p className="font-eng text-xl tracking-widest text-gray-800 mb-8">LOCATION</p>
           <p className="text-lg font-bold text-gray-800 mb-2">서울 팰리스 호텔 그랜드볼룸</p>
           <p className="text-sm text-gray-500 mb-10">서울 강남구 테헤란로 123</p>
-          <div className="grid grid-cols-3 gap-4 mb-10">
-            <a href="https://map.naver.com/v5/search/서울 팰리스 호텔" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-              <div className="w-10 h-10 bg-[#03C75A] rounded-full flex items-center justify-center mb-2 text-white font-bold text-xs">N</div>
-              <span className="text-[11px] font-semibold text-gray-600">네이버지도</span>
+          <div className="grid grid-cols-3 gap-4">
+            <a href="https://map.naver.com/v5/search/서울 팰리스 호텔" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 uppercase text-[10px] font-bold text-gray-500">
+                <span className="text-[#03C75A] text-lg mb-1">N</span>네이버
             </a>
-            <a href="https://map.kakao.com/link/search/서울 팰리스 호텔" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-              <div className="w-10 h-10 bg-[#FEE500] rounded-full flex items-center justify-center mb-2 text-[#191919] font-bold text-xs">K</div>
-              <span className="text-[11px] font-semibold text-gray-600">카카오맵</span>
+            <a href="https://map.kakao.com/link/search/서울 팰리스 호텔" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 uppercase text-[10px] font-bold text-gray-500">
+                <span className="text-[#FEE500] text-lg mb-1">K</span>카카오
             </a>
-            <a href="tmap://search?name=서울 팰리스 호텔" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-              <div className="w-10 h-10 bg-[#000000] rounded-full flex items-center justify-center mb-2 text-white font-bold text-xs">T</div>
-              <span className="text-[11px] font-semibold text-gray-600">티맵</span>
+            <a href="tmap://search?name=서울 팰리스 호텔" className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 uppercase text-[10px] font-bold text-gray-500">
+                <span className="text-black text-lg mb-1">T</span>티맵
             </a>
           </div>
         </motion.div>
@@ -143,34 +161,12 @@ function App() {
         <p className="opacity-40 text-xs">© 2026. All rights reserved.</p>
       </footer>
 
-      {/* 🌟 6. 이미지 크게 보기 모달 (팝업) */}
+      {/* 6. 모달 */}
       <AnimatePresence>
         {selectedImage && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
-            onClick={() => setSelectedImage(null)} // 검은 배경 누르면 닫힘
-            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-pointer"
-          >
-            {/* 닫기 버튼 */}
-            <button 
-              className="absolute top-6 right-6 p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition"
-              onClick={() => setSelectedImage(null)}
-            >
-              <X size={24} />
-            </button>
-            
-            {/* 확대된 이미지 */}
-            <motion.img 
-              src={selectedImage} 
-              initial={{ scale: 0.8 }} 
-              animate={{ scale: 1 }} 
-              exit={{ scale: 0.8 }} 
-              transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-              onClick={(e) => e.stopPropagation()} // 사진을 눌렀을 때는 안 닫히게 방지
-            />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedImage(null)} className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-pointer">
+            <button className="absolute top-6 right-6 p-2 bg-white/10 rounded-full text-white"><X size={24} /></button>
+            <motion.img src={selectedImage} initial={{ scale: 0.8 }} animate={{ scale: 1 }} exit={{ scale: 0.8 }} className="max-w-full max-h-[85vh] object-contain rounded-lg" />
           </motion.div>
         )}
       </AnimatePresence>
