@@ -75,17 +75,17 @@ function App() {
     groom: {
       title: "신랑측 마음 전하실 곳",
       accounts: [
-        { name: "신랑 우진규", bank: "국민은행", number: "123-456-7890" },
-        { name: "신랑 아버지 우승호", bank: "우리은행", number: "000-000-000000" },
-        { name: "신랑 어머니 신미순", bank: "농협은행", number: "000-0000-0000-00" },
+        { name: "신랑 아버님 우승호", bank: "우리은행", number: "000-000-000000" },
+        { name: "신랑 어머님 신미순", bank: "농협은행", number: "000-0000-0000-00" },
+        { name: "신랑 우진규", bank: "하나은행", number: "123-456-7890" },
       ]
     },
     bride: {
       title: "신부측 마음 전하실 곳",
       accounts: [
+        { name: "신부 아버님 이준희", bank: "기업은행", number: "000-000-000000" },
+        { name: "신부 어머님 이미례", bank: "하나은행", number: "000-000-000000" },
         { name: "신부 이지영", bank: "신한은행", number: "098-765-4321" },
-        { name: "신부 아버지 이준희", bank: "기업은행", number: "000-000-000000" },
-        { name: "신부 어머니 이미례", bank: "하나은행", number: "000-000-000000" },
       ]
     }
   };
@@ -101,14 +101,14 @@ function App() {
           className="relative z-10 text-center text-white mt-auto mb-20 px-4"
           initial="hidden" animate="visible" variants={staggerContainer}
         >
-          <motion.p variants={fadeUp} className="font-eng text-xs tracking-[0.4em] mb-4 text-white/90">THE WEDDING DAY</motion.p>
-          <motion.h1 variants={fadeUp} className="font-eng text-5xl mb-6 font-semibold tracking-tight text-white uppercase">Woojinkyu & Leejiyoung</motion.h1>
-          <motion.p variants={fadeUp} className="text-base font-light tracking-[0.2em] mb-2 text-white">2026. 05. 16. SAT 18:30</motion.p>
-          <motion.p variants={fadeUp} className="text-xs font-light tracking-[0.1em] text-white/70">서울대학교 연구공원 웨딩홀</motion.p>
+          <motion.p variants={fadeUp} className="font-eng text-xs tracking-[0.4em] mb-4 text-white/90 uppercase text-center">The Wedding Day</motion.p>
+          <motion.h1 variants={fadeUp} className="font-eng text-5xl mb-6 font-semibold tracking-tight text-white uppercase text-center">Woo Jinkyu & Lee Jiyoung</motion.h1>
+          <motion.p variants={fadeUp} className="text-base font-light tracking-[0.2em] mb-2 text-white text-center">2026. 05. 16. SAT 18:30</motion.p>
+          <motion.p variants={fadeUp} className="text-xs font-light tracking-[0.1em] text-white/70 text-center">서울대학교 연구공원 웨딩홀</motion.p>
         </motion.div>
       </section>
 
-      {/* 2. D-day 섹션 (아이콘 제거 및 미니멀화) */}
+      {/* 2. D-day */}
       <section className="py-20 px-6 bg-white">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
           <p className="text-gray-400 mb-6 text-[10px] font-medium tracking-[0.3em] uppercase">Count down</p>
@@ -120,11 +120,11 @@ function App() {
 
       <hr className="w-8 mx-auto border-gray-200" />
 
-      {/* 3. 초대글 (태그 오류 수정 완료) */}
+      {/* 3. 초대글 */}
       <section className="py-32 px-8 text-center bg-white">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer}>
-          <motion.p variants={fadeUp} className="font-eng text-[10px] tracking-[0.4em] text-[#a8a29e] mb-16 uppercase">Invitation</motion.p>
-          <motion.p variants={fadeUp} className="text-gray-700 leading-[2.8] text-[15px] font-light break-keep">
+          <motion.p variants={fadeUp} className="font-eng text-[10px] tracking-[0.4em] text-[#a8a29e] mb-16 uppercase text-center">Invitation</motion.p>
+          <motion.p variants={fadeUp} className="text-gray-700 leading-[2.8] text-[15px] font-light break-keep text-center">
             함께 있을 때 가장 나다운 모습이 되고,<br />
             함께 있을 때 미래를 꿈꾸게 하는 사람을 만났습니다.<br /><br />
             저희 두 사람이 믿음과 사랑으로<br />
@@ -159,12 +159,24 @@ function App() {
 
       <hr className="w-8 mx-auto border-gray-200" />
 
-      {/* 5. 오시는 길 */}
+      {/* 5. 오시는 길 (예식 일시 및 주차 안내 추가) */}
       <section className="py-32 px-6 bg-white">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
           <p className="font-eng text-xs tracking-[0.4em] mb-12 text-gray-400 uppercase">Location</p>
           <p className="text-lg font-bold text-gray-900 mb-4 tracking-tight">서울대학교 연구공원 웨딩홀</p>
-          <p className="text-[13px] text-gray-500 mb-12 leading-relaxed">서울특별시 관악구 낙성대로 38</p>
+          
+          <div className="text-[13px] text-gray-500 mb-12 leading-relaxed break-keep">
+            <p className="mb-1">서울특별시 관악구 낙성대로 38</p>
+            {/* 예식 일시 추가 */}
+            <p className="font-medium text-gray-800">2026년 5월 16일 토요일 오후 6시 30분</p>
+            
+            {/* 주차 안내 추가 */}
+            <div className="mt-8 pt-8 border-t border-gray-50 max-w-[240px] mx-auto text-gray-400 text-[12px]">
+              <p className="font-bold text-gray-500 mb-2 underline underline-offset-4">주차 안내</p>
+              <p>연구공원 단지 내 전용 주차장 이용 가능</p>
+              <p>(하객 2시간 무료 주차 지원)</p>
+            </div>
+          </div>
           
           <div className="flex flex-col gap-2 max-w-[280px] mx-auto">
             {['네이버 지도', '카카오맵', '티맵'].map((map) => (
@@ -215,7 +227,7 @@ function App() {
       </section>
 
       <footer className="bg-white py-24 text-center border-t border-gray-50">
-        <p className="text-[10px] tracking-[0.5em] text-gray-300 uppercase font-eng">Woojinkyu & Leejiyoung</p>
+        <p className="text-[10px] tracking-[0.5em] text-gray-300 uppercase font-eng">Woo Jinkyu & Lee Jiyoung</p>
       </footer>
 
       {/* 7. 모달 */}
