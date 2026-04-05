@@ -21,12 +21,13 @@ import sub3 from './assets/sub3.jpg';
 import sub3Full from './assets/sub3_full.jpg';
 import bgmFile from './assets/bgm.mp3';
 
+// 🌟 최적화: transform 애니메이션 간소화 및 ease 커브 단순화
 const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 15 }, // 이동 거리 축소로 렌더링 부담 감소
   visible: { 
     opacity: 1, 
     y: 0, 
-    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] } 
+    transition: { duration: 0.6, ease: "easeOut" } // 복잡한 베지어 곡선 대신 내장 ease 사용
   }
 };
 
@@ -34,7 +35,7 @@ const staggerContainer = {
   hidden: { opacity: 0 },
   visible: { 
     opacity: 1, 
-    transition: { staggerChildren: 0.2 } 
+    transition: { staggerChildren: 0.15 } 
   }
 };
 
@@ -156,25 +157,33 @@ function App() {
   };
 
   return (
-    <div className="max-w-[480px] mx-auto bg-white min-h-screen shadow-2xl font-serif text-gray-800 overflow-hidden relative">
+    // 🌟 최적화: 최상단 컨테이너 그림자 제거 (모바일에서 불필요한 연산)
+    <div className="max-w-[480px] mx-auto bg-white min-h-screen font-serif text-gray-800 overflow-hidden relative">
       
       <audio ref={audioRef} src={bgmFile} loop autoPlay />
 
+      {/* 🌟 최적화: backdrop-blur 및 무거운 shadow 제거 */}
       <button 
         onClick={togglePlay}
-        className="fixed bottom-8 right-6 z-[90] p-3.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl border border-gray-100 text-gray-600 transition-transform active:scale-90"
+        className="fixed bottom-8 right-6 z-[90] p-3.5 bg-white/95 rounded-full shadow-lg border border-gray-100 text-gray-600 transition-transform active:scale-90"
         aria-label="Toggle Music"
+        style={{ willChange: 'transform' }}
       >
         {isPlaying ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
       {/* 1. 메인 히어로 */}
       <section className="relative h-[100dvh] flex flex-col items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${mainImage})` }} />
+        {/* 🌟 최적화: 배경 이미지 렌더링 힌트 제공 */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center" 
+          style={{ backgroundImage: `url(${mainImage})`, willChange: 'transform' }} 
+        />
         <div className="absolute inset-0 bg-black/30" />
         <motion.div 
           className="relative z-10 text-center text-white mt-auto mb-24 px-4"
           initial="hidden" animate="visible" variants={staggerContainer}
+          style={{ willChange: 'opacity, transform' }} // 🌟 하드웨어 가속
         >
           <motion.p variants={fadeUp} className="font-eng text-[11px] tracking-[0.5em] mb-8 text-white/90 uppercase text-center">
             The Wedding Day
@@ -188,7 +197,10 @@ function App() {
 
       {/* 2. D-day */}
       <section className="pt-24 pb-16 px-6 bg-white">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
+        <motion.div 
+          initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} className="text-center"
+          style={{ willChange: 'opacity, transform' }}
+        >
           <p className="text-gray-400 mb-6 text-[10px] font-medium tracking-[0.3em] uppercase">Days until our wedding day</p>
           <div className="flex justify-center items-end gap-2 font-eng">
             <span className="text-5xl font-bold text-gray-900 tabular-nums tracking-tighter">D-{dDay}</span>
@@ -196,26 +208,25 @@ function App() {
         </motion.div>
       </section>
 
-      {/* 🌟 3. 캘린더 달력 섹션 (신규 추가) */}
+      {/* 3. 캘린더 달력 섹션 */}
       <section className="pb-32 px-8 bg-white">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
+        <motion.div 
+          initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} className="text-center"
+          style={{ willChange: 'opacity, transform' }}
+        >
           <p className="font-eng text-2xl text-gray-700 mb-3 tracking-widest">2026.05.16</p>
           <p className="text-[13px] text-gray-500 mb-12 font-medium">토요일 오후 6시 30분</p>
 
-          {/* 캘린더 그리드 */}
           <div className="max-w-[280px] mx-auto text-[13px] text-gray-600">
-            {/* 요일 헤더 */}
             <div className="grid grid-cols-7 gap-y-6 mb-5 font-medium text-gray-400">
               <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
             </div>
-            {/* 날짜들 (2026년 5월 기준 달력 배열) */}
             <div className="grid grid-cols-7 gap-y-6 items-center justify-items-center">
               <span></span><span></span><span></span><span></span><span></span>
               <span>1</span><span>2</span>
               <span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span>
               <span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
               
-              {/* 🌟 16일 강조 포인트 */}
               <span className="relative flex items-center justify-center w-full h-full">
                 <span className="absolute w-8 h-8 bg-[#9c8e81] rounded-full flex items-center justify-center text-white font-semibold shadow-sm">16</span>
               </span>
@@ -232,7 +243,10 @@ function App() {
 
       {/* 4. 초대글 및 가족 정보 */}
       <section className="pt-24 pb-32 px-8 text-center bg-white">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer}>
+        <motion.div 
+          initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={staggerContainer}
+          style={{ willChange: 'opacity, transform' }}
+        >
           
           <motion.div variants={fadeUp} className="mb-12">
             <p className="text-[17px] font-bold text-gray-900 mb-3 tracking-tight">서울대학교 연구공원 웨딩홀</p>
@@ -275,7 +289,15 @@ function App() {
 
       {/* 5. 갤러리 */}
       <section className="py-28 bg-white">
-        <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-eng text-center text-xs tracking-[0.4em] mb-16 text-gray-400 uppercase">Gallery</motion.p>
+        <motion.p 
+          initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} 
+          className="font-eng text-center text-xs tracking-[0.4em] mb-16 text-gray-400 uppercase"
+          style={{ willChange: 'opacity, transform' }}
+        >
+          Gallery
+        </motion.p>
+        
+        {/* 🌟 최적화: Swiper 렌더링 성능 향상을 위한 옵션 조정 */}
         <Swiper
           effect={'coverflow'}
           grabCursor={true}
@@ -285,16 +307,18 @@ function App() {
           pagination={{ clickable: true }}
           modules={[EffectCoverflow, Pagination]}
           className="pb-12"
+          watchSlidesProgress={true} // 스크롤 시 안 보이는 슬라이드 연산 줄임
         >
           {galleryData.map((img, index) => (
-            <SwiperSlide key={index} className="w-[300px] aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden shadow-md relative">
+            <SwiperSlide key={index} className="w-[300px] aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden shadow-sm relative">
               {({ isActive }) => (
                 <div className="w-full h-full relative cursor-pointer" onClick={() => setSelectedIndex(index)}>
                   <img src={img.thumb} loading="lazy" alt="wedding" className="w-full h-full object-cover" />
                   <div 
-                    className={`absolute inset-0 bg-black/40 transition-opacity duration-500 pointer-events-none ${
+                    className={`absolute inset-0 bg-black/40 transition-opacity duration-300 pointer-events-none ${
                       isActive ? 'opacity-0' : 'opacity-100'
                     }`} 
+                    style={{ willChange: 'opacity' }} // 🌟 최적화
                   />
                 </div>
               )}
@@ -307,7 +331,10 @@ function App() {
 
       {/* 6. 오시는 길 */}
       <section className="py-32 px-6 bg-white">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
+        <motion.div 
+          initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={fadeUp} className="text-center"
+          style={{ willChange: 'opacity, transform' }}
+        >
           <p className="font-eng text-xs tracking-[0.4em] mb-12 text-gray-400 uppercase">Location</p>
           
           <p className="text-lg font-bold text-gray-900 mb-2 tracking-tight">서울대학교 연구공원 웨딩홀</p>
@@ -358,7 +385,13 @@ function App() {
 
       {/* 7. 마음 전하실 곳 */}
       <section className="py-32 px-6 bg-white">
-        <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="font-eng text-xs tracking-[0.4em] mb-16 text-gray-400 uppercase text-center">Mind</motion.p>
+        <motion.p 
+          initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} 
+          className="font-eng text-xs tracking-[0.4em] mb-16 text-gray-400 uppercase text-center"
+          style={{ willChange: 'opacity, transform' }}
+        >
+          Mind
+        </motion.p>
         
         {['groom', 'bride'].map((side) => (
           <div key={side} className="mb-4 bg-[#fafafa] rounded-lg overflow-hidden">
@@ -370,7 +403,7 @@ function App() {
             </button>
             <AnimatePresence>
               {openSection === side && (
-                <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} transition={{ duration: 0.3 }} className="px-6 pb-2 overflow-hidden">
+                <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} transition={{ duration: 0.2 }} className="px-6 pb-2 overflow-hidden">
                   {accountData[side].accounts.map((acc, idx) => (
                     <div key={idx} className="py-5 border-t border-gray-100 flex justify-between items-center last:border-b-0">
                       <div>
@@ -396,12 +429,13 @@ function App() {
         {isContactModalOpen && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4" // 🌟 최적화: blur 제거
           >
             <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 20 }} 
+              initial={{ scale: 0.95, opacity: 0, y: 10 }} 
               animate={{ scale: 1, opacity: 1, y: 0 }} 
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
               className="bg-white w-full max-w-[340px] rounded-2xl overflow-hidden shadow-2xl"
             >
               <div className="flex justify-between items-center p-5 border-b border-gray-100">
@@ -422,7 +456,7 @@ function App() {
                     </button>
                     <AnimatePresence>
                       {contactSection === side && (
-                        <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="px-5 pb-2 overflow-hidden">
+                        <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} transition={{ duration: 0.2 }} className="px-5 pb-2 overflow-hidden">
                           {contactData[side].people.map((person, idx) => (
                             <div key={idx} className="py-4 border-t border-gray-50 flex justify-between items-center last:border-b-0">
                               <div className="flex items-center gap-3">
@@ -459,8 +493,8 @@ function App() {
               initial={{ scale: 0.95, opacity: 0 }} 
               animate={{ scale: 1, opacity: 1 }} 
               exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-full max-h-[85dvh] object-contain shadow-2xl" 
+              transition={{ duration: 0.2 }} // 🌟 최적화: 속도 상향
+              className="max-w-full max-h-[85dvh] object-contain" // 🌟 최적화: shadow 제거
             />
           </motion.div>
         )}
