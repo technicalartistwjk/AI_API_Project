@@ -231,9 +231,9 @@ function App() {
           style={{ backgroundImage: `url(${mainImage})`, willChange: 'transform' }} 
         />
         <div className="absolute inset-0 bg-black/30" />
-        {/* 🌟 폰 기종 상관없이 위치 고정 (mt-auto 제거, absolute top-[65%] 사용) */}
+        {/* 🌟 폰 기종 상관없이 위치 고정 (mt-auto 제거, absolute top-[85%] 사용) */}
         <motion.div 
-          className="absolute top-[65%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full z-10 text-center text-white px-4"
+          className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full z-10 text-center text-white px-4"
           initial="hidden" animate="visible" variants={staggerContainer}
           style={{ willChange: 'opacity, transform' }}
         >
