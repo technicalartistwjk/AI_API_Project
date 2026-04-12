@@ -105,6 +105,30 @@ function App() {
     setIsPlaying(!isPlaying);
   };
 
+
+  useEffect(() => {
+    const calculateDDay = () => {
+      // 🌟 타겟 시간을 예식 시간이 아닌 '한국 시간 자정(00:00:00+09:00)'으로 변경
+      const targetDate = new Date('2026-05-16T00:00:00+09:00').getTime();
+      const now = new Date().getTime();
+      const gap = targetDate - now;
+
+      if (gap <= 0) {
+        setDDay('0');
+      } else {
+        const days = Math.ceil(gap / (1000 * 60 * 60 * 24));
+        setDDay(`${days}`);
+      }
+    };
+    
+    calculateDDay();
+    
+    // 🌟 업데이트 주기는 기존대로 1시간(1000ms * 60초 * 60분) 유지
+    const timer = setInterval(calculateDDay, 1000 * 60 * 60);
+    return () => clearInterval(timer);
+  }, []);
+
+/*
   useEffect(() => {
     const calculateDDay = () => {
       const targetDate = new Date('2026-05-16T18:30:00');
@@ -121,6 +145,8 @@ function App() {
     const timer = setInterval(calculateDDay, 1000 * 60 * 60);
     return () => clearInterval(timer);
   }, []);
+
+*/
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -151,13 +177,13 @@ function App() {
     groom: {
       title: "신랑측 마음 전하실 곳",
       accounts: [
-        { name: "신랑 우진규", bank: "하나은행", number: "123-456-7890" },
+        { name: "신랑 우진규", bank: "하나은행", number: "332-910496-77107" },
       ]
     },
     bride: {
       title: "신부측 마음 전하실 곳",
       accounts: [
-        { name: "신부 이지영", bank: "신한은행", number: "098-765-4321" },
+        { name: "신부 이지영", bank: "신한은행", number: "110-3836-65395" },
       ]
     }
   };
@@ -166,17 +192,17 @@ function App() {
     groom: {
       title: "신랑측 연락처",
       people: [
-        { relation: "신랑", name: "우진규", phone: "010-1234-5678" },
-        { relation: "아버지", name: "우승호", phone: "010-0000-0000" },
-        { relation: "어머니", name: "신미순", phone: "010-0000-0000" },
+        { relation: "신랑 아버지", name: "우승호", phone: "010-2043-1236" },
+        { relation: "신랑 어머니", name: "신미순", phone: "010-2044-2581" },
+        { relation: "신랑", name: "우진규", phone: "010-4314-2180" },
       ]
     },
     bride: {
       title: "신부측 연락처",
       people: [
-        { relation: "신부", name: "이지영", phone: "010-9876-5432" },
-        { relation: "아버지", name: "이준희", phone: "010-0000-0000" },
-        { relation: "어머니", name: "이미례", phone: "010-0000-0000" },
+        { relation: "신부 아버지", name: "이준희", phone: "010-2185-2495" },
+        { relation: "신부 어머니", name: "이미례", phone: "010-5334-0617" },
+        { relation: "신부", name: "이지영", phone: "010-6306-9211" },
       ]
     }
   };
@@ -214,8 +240,8 @@ function App() {
             The Wedding Day
           </motion.p>
           <motion.h1 variants={fadeUp} className="font-eng text-4xl font-semibold tracking-widest text-white uppercase text-center leading-[1.6]">
-            Woojinkyu<br />
-            Leejiyoung
+            Woo-jinkyu<br />
+            Lee-jiyoung
           </motion.h1>
         </motion.div>
       </section>
