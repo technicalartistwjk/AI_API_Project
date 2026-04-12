@@ -148,6 +148,20 @@ function App() {
 
 */
 
+  useEffect(() => {
+    const scrollToInitialPosition = () => {
+      const totalHeight = document.documentElement.scrollHeight;
+      const targetScroll = totalHeight * 0.03; // 전체 높이의 3% 계산
+
+      window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+    };
+
+    // 0.5초 뒤에 실행
+    const timer = setTimeout(scrollToInitialPosition, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     alert('계좌번호가 복사되었습니다.');
@@ -456,8 +470,12 @@ function App() {
             </div>
 
             <div>
-              <p className="font-bold text-gray-800 mb-2 text-[14px]">자가</p>
-              <p className="break-keep mb-1 font-medium text-gray-700">낙성대 입구 서울대 후문 방향이 찾기 수월 (하객주차 2시간 무료)</p>
+              <p className="font-bold text-gray-800 mb-2 text-[14px]">자차</p>
+              <p className="break-keep mb-1 font-medium text-gray-700">낙성대 입구 서울대 후문 방향이 찾기 수월</p>
+
+              <p className="font-bold text-gray-900 text-[15px] mb-0.5">서울대학교 연구공원 웨딩홀</p>
+              <p className="font-medium text-gray-600 text-[13px] mb-3">( 하객주차 2시간 무료 )</p>
+
               <p className="mb-2 text-[#a8a29e] text-[12px]">* 내비게이션 안내 : 서울대연구공원웨딩홀 검색</p>
               <p className="break-keep">
                 남부순환도로에서 낙성대 방향 좌회전(강남에서) / 우회전(신림에서) → 서울대 후문 방향 약 1.6km 직진 → 후문 게이트 직진 좌회전 → 샛길로 100m 진입 검은 피라미드 유리건물
