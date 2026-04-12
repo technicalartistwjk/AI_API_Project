@@ -11,15 +11,25 @@ import 'swiper/css/pagination';
 
 // 미디어 임포트
 import mainImage from './assets/main.jpg';
-import sub0 from './assets/sub0.jpg';
-import sub0Full from './assets/sub0_full.jpg';
-import sub1 from './assets/sub1.jpg';
-import sub1Full from './assets/sub1_full.jpg';
-import sub2 from './assets/sub2.jpg';
-import sub2Full from './assets/sub2_full.jpg';
-import sub3 from './assets/sub3.jpg';
-import sub3Full from './assets/sub3_full.jpg';
 import bgmFile from './assets/bgm.mp3';
+
+// Film 이미지 임포트
+import film0 from './assets/Film/Film_00.jpg';
+import film1 from './assets/Film/Film_01.jpg';
+import film2 from './assets/Film/Film_02.jpg';
+import film3 from './assets/Film/Film_03.jpg';
+import film4 from './assets/Film/Film_04.jpg';
+import film5 from './assets/Film/Film_05.jpg';
+
+// Digital 이미지 임포트
+import digital0 from './assets/Digital/Digital_00.jpg';
+import digital1 from './assets/Digital/Digital_01.jpg';
+import digital2 from './assets/Digital/Digital_02.jpg';
+import digital3 from './assets/Digital/Digital_03.jpg';
+import digital4 from './assets/Digital/Digital_04.jpg';
+import digital5 from './assets/Digital/Digital_05.jpg';
+import digital6 from './assets/Digital/Digital_06.jpg';
+import digital7 from './assets/Digital/Digital_07.jpg';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 15 },
@@ -40,7 +50,6 @@ const staggerContainer = {
 
 function App() {
   const [openSection, setOpenSection] = useState(null);
-  const [selectedIndex, setSelectedIndex] = useState(null);
   const [dDay, setDDay] = useState('');
   
   const [isPlaying, setIsPlaying] = useState(false);
@@ -49,12 +58,11 @@ function App() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [contactSection, setContactSection] = useState(null);
 
-  // 🌟 카카오톡 덜컥거림 방지: 초기 화면 높이 고정용 상태
   const [heroHeight, setHeroHeight] = useState('100vh');
+  
+  const [selectedImage, setSelectedImage] = useState(null); 
 
   useEffect(() => {
-    // 🌟 처음에 화면이 로드될 때의 정확한 픽셀 높이를 구해서 고정시켜버립니다.
-    // 이렇게 하면 카톡 상하단 바가 나타나거나 사라져도 화면이 요동치지 않습니다.
     setHeroHeight(`${window.innerHeight}px`);
   }, []);
 
@@ -119,27 +127,36 @@ function App() {
     alert('계좌번호가 복사되었습니다.');
   };
 
-  const galleryData = [
-    { thumb: sub0, full: sub0Full },
-    { thumb: sub1, full: sub1Full },
-    { thumb: sub2, full: sub2Full },
-    { thumb: sub3, full: sub3Full },
+  const filmGalleryData = [
+    { thumb: film0, full: film0 },
+    { thumb: film1, full: film1 },
+    { thumb: film2, full: film2 },
+    { thumb: film3, full: film3 },
+    { thumb: film4, full: film4 },
+    { thumb: film5, full: film5 },
+  ];
+
+  const digitalGalleryData = [
+    { thumb: digital0, full: digital0 },
+    { thumb: digital1, full: digital1 },
+    { thumb: digital2, full: digital2 },
+    { thumb: digital3, full: digital3 },
+    { thumb: digital4, full: digital4 },
+    { thumb: digital5, full: digital5 },
+    { thumb: digital6, full: digital6 },
+    { thumb: digital7, full: digital7 },
   ];
 
   const accountData = {
     groom: {
       title: "신랑측 마음 전하실 곳",
       accounts: [
-        { name: "신랑 아버님 우승호", bank: "우리은행", number: "000-000-000000" },
-        { name: "신랑 어머님 신미순", bank: "농협은행", number: "000-0000-0000-00" },
         { name: "신랑 우진규", bank: "하나은행", number: "123-456-7890" },
       ]
     },
     bride: {
       title: "신부측 마음 전하실 곳",
       accounts: [
-        { name: "신부 아버님 이준희", bank: "기업은행", number: "000-000-000000" },
-        { name: "신부 어머님 이미례", bank: "하나은행", number: "000-000-000000" },
         { name: "신부 이지영", bank: "신한은행", number: "098-765-4321" },
       ]
     }
@@ -178,7 +195,7 @@ function App() {
         {isPlaying ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </button>
 
-      {/* 🌟 1. 메인 히어로 (height를 h-[100dvh]에서 style={{ height: heroHeight }}로 변경하여 고정시킴) */}
+      {/* 1. 메인 히어로 */}
       <section 
         className="relative flex flex-col items-center justify-center overflow-hidden"
         style={{ height: heroHeight }}
@@ -255,7 +272,6 @@ function App() {
           initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={staggerContainer}
           style={{ willChange: 'opacity, transform' }}
         >
-          
           <motion.div variants={fadeUp} className="mb-12">
             <p className="text-[17px] font-bold text-gray-900 mb-3 tracking-tight">서울대학교 연구공원 웨딩홀</p>
             <p className="text-[14px] font-medium text-gray-500 tracking-[0.1em]">2026. 05. 16. SAT 18:30</p>
@@ -295,43 +311,79 @@ function App() {
 
       <hr className="w-8 mx-auto border-gray-200" />
 
-      {/* 5. 갤러리 */}
+      {/* 5. 갤러리 (FILM / DIGITAL 분할) */}
       <section className="py-28 bg-white">
         <motion.p 
           initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} 
-          className="font-eng text-center text-xs tracking-[0.4em] mb-16 text-gray-400 uppercase"
+          className="font-eng text-center text-xs tracking-[0.4em] mb-20 text-gray-400 uppercase"
           style={{ willChange: 'opacity, transform' }}
         >
           Gallery
         </motion.p>
         
-        <Swiper
-          effect={'coverflow'}
-          grabCursor={true}
-          centeredSlides={true}
-          slidesPerView={'auto'}
-          coverflowEffect={{ rotate: 0, stretch: 50, depth: 150, modifier: 1, slideShadows: false }}
-          pagination={{ clickable: true }}
-          modules={[EffectCoverflow, Pagination]}
-          className="pb-12"
-          watchSlidesProgress={true}
-        >
-          {galleryData.map((img, index) => (
-            <SwiperSlide key={index} className="w-[300px] aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden shadow-sm relative">
-              {({ isActive }) => (
-                <div className="w-full h-full relative cursor-pointer" onClick={() => setSelectedIndex(index)}>
-                  <img src={img.thumb} loading="lazy" alt="wedding" className="w-full h-full object-cover" />
-                  <div 
-                    className={`absolute inset-0 bg-black/40 transition-opacity duration-300 pointer-events-none ${
-                      isActive ? 'opacity-0' : 'opacity-100'
-                    }`} 
-                    style={{ willChange: 'opacity' }}
-                  />
-                </div>
-              )}
-            </SwiperSlide>
-          ))}
-        </Swiper>
+        {/* --- FILM 갤러리 --- */}
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="mb-24">
+          <p className="font-eng text-center text-[11px] tracking-[0.3em] mb-10 text-gray-800 font-semibold uppercase">Film</p>
+          <Swiper
+            effect={'coverflow'}
+            grabCursor={true}
+            centeredSlides={true}
+            slidesPerView={'auto'}
+            coverflowEffect={{ rotate: 0, stretch: 50, depth: 150, modifier: 1, slideShadows: false }}
+            pagination={{ clickable: true }}
+            modules={[EffectCoverflow, Pagination]}
+            className="pb-12"
+            watchSlidesProgress={true}
+          >
+            {filmGalleryData.map((img, index) => (
+              <SwiperSlide key={`film-${index}`} className="w-[300px] aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden shadow-sm relative">
+                {({ isActive }) => (
+                  <div className="w-full h-full relative cursor-pointer" onClick={() => setSelectedImage(img.full)}>
+                    <img src={img.thumb} loading="lazy" alt={`wedding film ${index}`} className="w-full h-full object-cover" />
+                    <div 
+                      className={`absolute inset-0 bg-black/40 transition-opacity duration-300 pointer-events-none ${
+                        isActive ? 'opacity-0' : 'opacity-100'
+                      }`} 
+                      style={{ willChange: 'opacity' }}
+                    />
+                  </div>
+                )}
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </motion.div>
+
+        {/* --- DIGITAL 갤러리 --- */}
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
+          <p className="font-eng text-center text-[11px] tracking-[0.3em] mb-10 text-gray-800 font-semibold uppercase">Digital</p>
+          <Swiper
+            effect={'coverflow'}
+            grabCursor={true}
+            centeredSlides={true}
+            slidesPerView={'auto'}
+            coverflowEffect={{ rotate: 0, stretch: 50, depth: 150, modifier: 1, slideShadows: false }}
+            pagination={{ clickable: true }}
+            modules={[EffectCoverflow, Pagination]}
+            className="pb-12"
+            watchSlidesProgress={true}
+          >
+            {digitalGalleryData.map((img, index) => (
+              <SwiperSlide key={`digital-${index}`} className="w-[300px] aspect-[3/4] bg-gray-50 rounded-lg overflow-hidden shadow-sm relative">
+                {({ isActive }) => (
+                  <div className="w-full h-full relative cursor-pointer" onClick={() => setSelectedImage(img.full)}>
+                    <img src={img.thumb} loading="lazy" alt={`wedding digital ${index}`} className="w-full h-full object-cover" />
+                    <div 
+                      className={`absolute inset-0 bg-black/40 transition-opacity duration-300 pointer-events-none ${
+                        isActive ? 'opacity-0' : 'opacity-100'
+                      }`} 
+                      style={{ willChange: 'opacity' }}
+                    />
+                  </div>
+                )}
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </motion.div>
       </section>
 
       <hr className="w-8 mx-auto border-gray-200" />
@@ -436,7 +488,7 @@ function App() {
         {isContactModalOpen && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4" 
           >
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 10 }} 
@@ -488,20 +540,20 @@ function App() {
 
       {/* 갤러리 이미지 모달 */}
       <AnimatePresence>
-        {selectedIndex !== null && (
+        {selectedImage && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-            onClick={() => setSelectedIndex(null)} 
+            onClick={() => setSelectedImage(null)} 
             className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-4 cursor-pointer"
           >
             <button className="absolute top-10 right-10 text-white/40"><X size={28} /></button>
             <motion.img 
-              key={selectedIndex} src={galleryData[selectedIndex].full} 
+              src={selectedImage} 
               initial={{ scale: 0.95, opacity: 0 }} 
               animate={{ scale: 1, opacity: 1 }} 
               exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="max-w-full max-h-[85dvh] object-contain"
+              transition={{ duration: 0.2 }} 
+              className="max-w-full max-h-[85dvh] object-contain" 
             />
           </motion.div>
         )}
