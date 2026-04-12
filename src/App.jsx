@@ -546,7 +546,8 @@ function App() {
                           {contactData[side].people.map((person, idx) => (
                             <div key={idx} className="py-4 border-t border-gray-50 flex justify-between items-center last:border-b-0">
                               <div className="flex items-center gap-3">
-                                <span className="text-[11px] text-gray-400 w-10">{person.relation}</span>
+
+                                <span className="text-[11px] text-gray-400 w-12 break-keep leading-[1.3]">{person.relation}</span>
                                 <span className="text-[14px] text-gray-700 font-medium">{person.name}</span>
                               </div>
                               <a href={`tel:${person.phone}`} className="p-2 bg-gray-50 text-gray-500 rounded-full hover:bg-gray-100 transition-colors">
