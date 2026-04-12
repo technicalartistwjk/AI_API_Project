@@ -183,7 +183,7 @@ function App() {
     bride: {
       title: "신부측 마음 전하실 곳",
       accounts: [
-        { name: "신부 이지영", bank: "신한은행", number: "110-3836-65395" },
+        { name: "신부 이지영", bank: "신한은행", number: "110-383-665395" },
       ]
     }
   };
@@ -231,8 +231,9 @@ function App() {
           style={{ backgroundImage: `url(${mainImage})`, willChange: 'transform' }} 
         />
         <div className="absolute inset-0 bg-black/30" />
+        {/* 🌟 폰 기종 상관없이 위치 고정 (mt-auto 제거, absolute top-[65%] 사용) */}
         <motion.div 
-          className="relative z-10 text-center text-white mt-auto mb-24 px-4"
+          className="absolute top-[65%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full z-10 text-center text-white px-4"
           initial="hidden" animate="visible" variants={staggerContainer}
           style={{ willChange: 'opacity, transform' }}
         >
